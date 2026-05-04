@@ -1,15 +1,10 @@
 // ============================================
-// BASHIRI NASI - TIPSTER LEADERBOARD
-// Rankings by win rate, revenue, sales
+// BASHIRI NASI - LEADERBOARD MODULE
+// REAL API DATA ONLY - No Demo/Fallback Data
 // ============================================
 
 var Leaderboard = {
     currentFilter: 'all',
-    
-    init: function() {
-        this.load('all');
-        console.log('🏆 Leaderboard Initialized');
-    },
     
     load: function(filter) {
         this.currentFilter = filter;
@@ -19,158 +14,192 @@ var Leaderboard = {
             tab.classList.remove('active');
         });
         
-        var activeTab = document.querySelector('[onclick*="' + filter + '"]');
-        if (activeTab) activeTab.classList.add('active');
-        
-        // Get and sort tipsters
-        var tipsters = this.getTipstersWithStats();
-        var sorted = this.sortTipsters(tipsters, filter);
-        
-        // Render
-        this.render(sorted);
-    },
-    
-    getTipstersWithStats: function() {
-        var users = this.getUsersData();
-        var tips = this.getTipsData();
-        var ratings = this.getRatingsData();
-        
-        var tipsters = users.filter(function(u) { return u.role === 'tipster'; });
-        
-        return tipsters.map(function(tipster) {
-            var tipsterTips = tips.filter(function(t) { return t.tipsterId === tipster.id; });
-            var wonTips = tipsterTips.filter(function(t) { return t.result === 'won'; }).length;
-            var lostTips = tipsterTips.filter(function(t) { return t.result === 'lost'; }).length;
-            var totalCompleted = wonTips + lostTips;
-            var totalSold = tipsterTips.reduce(function(sum, t) { return sum + (t.purchased || 0); }, 0);
-            var totalRevenue = tipsterTips.reduce(function(sum, t) { return sum + ((t.purchased || 0) * (t.price || 0)); }, 0);
-            var winRate = totalCompleted > 0 ? Math.round((wonTips / totalCompleted) * 100) : 0;
-            
-            var tipsterRatings = ratings.filter(function(r) { return r.tipsterId === tipster.id; });
-            var avgRating = tipsterRatings.length > 0 ? 
-                (tipsterRatings.reduce(function(sum, r) { return sum + r.stars; }, 0) / tipsterRatings.length).toFixed(1) : 0;
-            
-            return {
-                id: tipster.id,
-                name: tipster.name || 'Unknown',
-                bio: tipster.bio || '',
-                totalTips: tipsterTips.length,
-                wonTips: wonTips,
-                lostTips: lostTips,
-                winRate: winRate,
-                totalSold: totalSold,
-                totalRevenue: totalRevenue,
-                avgRating: parseFloat(avgRating),
-                ratingCount: tipsterRatings.length,
-                joinedDate: tipster.createdAt
-            };
+        // Set active tab
+        var tabs = document.querySelectorAll('.leaderboard-tab');
+        tabs.forEach(function(tab) {
+            var tabText = tab.textContent.toLowerCase();
+            if ((filter === 'all' && tabText.includes('wote')) || 
+                (filter === 'monthly' && tabText.includes('mwezi')) || 
+                (filter === 'weekly' && tabText.includes('wiki')) || 
+                (filter === 'winrate' && tabText.includes('win rate'))) {
+                tab.classList.add('active');
+            }
         });
-    },
-    
-    sortTipsters: function(tipsters, filter) {
-        switch(filter) {
-            case 'weekly':
-                return tipsters.sort(function(a, b) { return b.totalSold - a.totalSold; });
-            case 'monthly':
-                return tipsters.sort(function(a, b) { return b.totalRevenue - a.totalRevenue; });
-            case 'winrate':
-                return tipsters.filter(function(t) { return t.totalTips >= 5; }).sort(function(a, b) { return b.winRate - a.winRate; });
-            case 'revenue':
-                return tipsters.sort(function(a, b) { return b.totalRevenue - a.totalRevenue; });
-            default:
-                return tipsters.sort(function(a, b) { 
-                    var scoreA = (a.winRate * 0.4) + (a.totalSold * 0.3) + (a.avgRating * 20 * 0.3);
-                    var scoreB = (b.winRate * 0.4) + (b.totalSold * 0.3) + (b.avgRating * 20 * 0.3);
-                    return scoreB - scoreA;
-                });
-        }
-    },
-    
-    render: function(tipsters) {
-        var list = document.getElementById('leaderboardList');
-        if (!list) return;
         
-        if (tipsters.length === 0) {
-            list.innerHTML = '<div style="text-align:center;padding:40px;"><p>Hakuna wataalamu bado.</p></div>';
+        // Show loading state
+        var container = document.getElementById('leaderboardList');
+        if (container) {
+            container.innerHTML = '<div style="text-align:center;padding:40px;">' +
+                '<i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#059669;"></i>' +
+                '<p>Loading tipsters from server...</p>' +
+                '</div>';
+        }
+        
+        // Fetch from API only
+        this.fetchTipsters(filter);
+    },
+    
+    fetchTipsters: function(filter) {
+        var self = this;
+        var container = document.getElementById('leaderboardList');
+        
+        // Check if API function exists
+        if (typeof apiCall !== 'function') {
+            if (container) {
+                container.innerHTML = '<div style="text-align:center;padding:60px 20px;">' +
+                    '<div style="font-size:3rem;margin-bottom:16px;">⚠️</div>' +
+                    '<h3>Cannot Connect to Server</h3>' +
+                    '<p style="color:#6B7280;">Please make sure the API is properly configured.</p>' +
+                    '<button class="btn btn-primary" style="margin-top:16px;" onclick="Leaderboard.load(\'all\')">' +
+                    '<i class="fas fa-sync-alt"></i> Try Again</button>' +
+                    '</div>';
+            }
             return;
         }
         
-        var medals = ['🥇', '🥈', '🥉'];
+        // Fetch tipsters from real API
+        apiCall('users.php?role=tipster', 'GET')
+            .then(function(response) {
+                if (response.success && response.data && response.data.length > 0) {
+                    // Fetch tips for statistics
+                    apiCall('tips.php?action=all', 'GET')
+                        .then(function(tipResponse) {
+                            var tips = tipResponse.success ? (tipResponse.data || []) : [];
+                            self.renderLeaderboard(response.data, tips, filter);
+                        })
+                        .catch(function() {
+                            if (container) {
+                                container.innerHTML = '<div style="text-align:center;padding:60px 20px;">' +
+                                    '<div style="font-size:3rem;margin-bottom:16px;">⚠️</div>' +
+                                    '<h3>Failed to Load Tips</h3>' +
+                                    '<p style="color:#6B7280;">Please try again in a moment.</p>' +
+                                    '<button class="btn btn-primary" style="margin-top:16px;" onclick="Leaderboard.load(\'all\')">' +
+                                    '<i class="fas fa-sync-alt"></i> Try Again</button>' +
+                                    '</div>';
+                            }
+                        });
+                } else {
+                    self.showEmpty();
+                }
+            })
+            .catch(function() {
+                if (container) {
+                    container.innerHTML = '<div style="text-align:center;padding:60px 20px;">' +
+                        '<div style="font-size:3rem;margin-bottom:16px;">⚠️</div>' +
+                        '<h3>Cannot Connect to Server</h3>' +
+                        '<p style="color:#6B7280;">Make sure the server is running and try again.</p>' +
+                        '<button class="btn btn-primary" style="margin-top:16px;" onclick="Leaderboard.load(\'all\')">' +
+                        '<i class="fas fa-sync-alt"></i> Try Again</button>' +
+                        '</div>';
+                }
+            });
+    },
+    
+    renderLeaderboard: function(tipsters, tips, filter) {
+        var container = document.getElementById('leaderboardList');
+        if (!container) return;
+        
+        // Calculate stats for each tipster
+        var tipsterStats = tipsters.map(function(tipster) {
+            var tipsterTips = tips.filter(function(t) {
+                return t.tipster_id === tipster.id;
+            });
+            
+            var total = tipsterTips.length;
+            var won = tipsterTips.filter(function(t) { return t.result === 'won'; }).length;
+            var lost = tipsterTips.filter(function(t) { return t.result === 'lost'; }).length;
+            var winRate = (won + lost) > 0 ? Math.round((won / (won + lost)) * 100) : 0;
+            
+            return {
+                id: tipster.id,
+                name: tipster.name || 'Tipster',
+                bio: tipster.bio || '',
+                totalTips: total,
+                won: won,
+                lost: lost,
+                winRate: winRate
+            };
+        });
+        
+        // Filter out tipsters with no tips
+        var filtered = tipsterStats.filter(function(s) {
+            return s.totalTips > 0;
+        });
+        
+        // Sort by win rate (highest first), then by total tips
+        filtered.sort(function(a, b) {
+            if (b.winRate !== a.winRate) return b.winRate - a.winRate;
+            return b.totalTips - a.totalTips;
+        });
+        
+        // Top 20 only
+        filtered = filtered.slice(0, 20);
+        
+        if (filtered.length === 0) {
+            this.showEmpty();
+            return;
+        }
+        
         var html = '';
         
-        tipsters.forEach(function(tipster, index) {
+        filtered.forEach(function(tipster, index) {
             var rank = index + 1;
-            var rankClass = rank <= 3 ? 'rank-' + rank : 'rank-other';
-            var medalHtml = rank <= 3 ? '<span class="leaderboard-medal">' + medals[rank - 1] + '</span>' : '';
+            var rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
+            var medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
             
-            var starsHtml = '';
-            if (tipster.avgRating > 0) {
-                starsHtml = '<span style="color:#F59E0B;">' + '★'.repeat(Math.round(tipster.avgRating)) + '</span>' +
-                    '<span style="font-size:0.7rem;color:#6B7280;"> ' + tipster.avgRating + '</span>';
-            }
+            var winRateColor = tipster.winRate >= 70 ? '#059669' : 
+                               tipster.winRate >= 50 ? '#F59E0B' : '#EF4444';
             
-            html += '<div class="leaderboard-card">' +
-                '<div class="leaderboard-rank ' + rankClass + '">' + (rank <= 3 ? medalHtml : rank) + '</div>' +
-                '<div class="leaderboard-info">' +
-                '<div class="leaderboard-name">' + this.escapeHTML(tipster.name) + ' ' + starsHtml + '</div>' +
-                '<div class="leaderboard-bio">' + this.escapeHTML((tipster.bio || '').substring(0, 60)) + '</div>' +
-                '</div>' +
-                '<div class="leaderboard-stats">' +
-                '<div class="leaderboard-stat"><div class="leaderboard-stat-value" style="color:#059669;">' + tipster.winRate + '%</div><div class="leaderboard-stat-label">Win Rate</div></div>' +
-                '<div class="leaderboard-stat"><div class="leaderboard-stat-value">' + tipster.totalTips + '</div><div class="leaderboard-stat-label">Tips</div></div>' +
-                '<div class="leaderboard-stat"><div class="leaderboard-stat-value">' + tipster.totalSold + '</div><div class="leaderboard-stat-label">Zilizouzwa</div></div>' +
-                '<div class="leaderboard-stat"><div class="leaderboard-stat-value" style="color:#059669;">TZS ' + this.formatNumber(tipster.totalRevenue) + '</div><div class="leaderboard-stat-label">Mapato</div></div>' +
-                '</div>' +
-                '</div>';
-        }.bind(this));
+            html += '<div class="leaderboard-card">';
+            html += '<div class="leaderboard-rank ' + rankClass + '">';
+            html += medal || rank;
+            html += '</div>';
+            html += '<div class="leaderboard-info">';
+            html += '<div class="leaderboard-name">' + escapeHTML(tipster.name) + '</div>';
+            html += '<div class="leaderboard-bio">' + escapeHTML(tipster.bio) + '</div>';
+            html += '</div>';
+            html += '<div class="leaderboard-stats">';
+            html += '<div class="leaderboard-stat">';
+            html += '<div class="leaderboard-stat-value" style="color:' + winRateColor + ';font-size:1.2rem;">' + tipster.winRate + '%</div>';
+            html += '<div class="leaderboard-stat-label">Win Rate</div>';
+            html += '</div>';
+            html += '<div class="leaderboard-stat">';
+            html += '<div class="leaderboard-stat-value">' + tipster.won + '/' + tipster.lost + '</div>';
+            html += '<div class="leaderboard-stat-label">W/L</div>';
+            html += '</div>';
+            html += '<div class="leaderboard-stat">';
+            html += '<div class="leaderboard-stat-value">' + tipster.totalTips + '</div>';
+            html += '<div class="leaderboard-stat-label">Total</div>';
+            html += '</div>';
+            html += '</div>';
+            html += '</div>';
+        });
         
-        list.innerHTML = html;
+        container.innerHTML = html;
     },
     
-    getUsersData: function() {
-        try {
-            var d = localStorage.getItem('bashiri_users');
-            if (!d) return [];
-            if (d.startsWith('ENC:') && typeof CryptoJS !== 'undefined') {
-                var bytes = CryptoJS.AES.decrypt(d.substring(4), 'BashiriNasi@2025!TZ#Secure#Key$%^&*()');
-                var decrypted = bytes.toString(CryptoJS.enc.Utf8);
-                if (decrypted) return JSON.parse(decrypted);
-            }
-            return JSON.parse(d);
-        } catch(e) { return []; }
-    },
-    
-    getTipsData: function() {
-        try {
-            var d = localStorage.getItem('bashiri_tips');
-            if (!d) return [];
-            if (d.startsWith('ENC:') && typeof CryptoJS !== 'undefined') {
-                var bytes = CryptoJS.AES.decrypt(d.substring(4), 'BashiriNasi@2025!TZ#Secure#Key$%^&*()');
-                var decrypted = bytes.toString(CryptoJS.enc.Utf8);
-                if (decrypted) return JSON.parse(decrypted);
-            }
-            return JSON.parse(d);
-        } catch(e) { return []; }
-    },
-    
-    getRatingsData: function() {
-        try {
-            return JSON.parse(localStorage.getItem('bashiri_ratings') || '[]');
-        } catch(e) { return []; }
-    },
-    
-    escapeHTML: function(str) {
-        if (!str) return '';
-        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    },
-    
-    formatNumber: function(n) {
-        return Number(n).toLocaleString('en-TZ');
+    showEmpty: function() {
+        var container = document.getElementById('leaderboardList');
+        if (container) {
+            container.innerHTML = '<div style="text-align:center;padding:60px 20px;">' +
+                '<div style="font-size:3rem;margin-bottom:16px;">🏆</div>' +
+                '<h3>No Tipsters Yet</h3>' +
+                '<p style="color:#6B7280;">Tipsters will appear here once they start posting tips.</p>' +
+                '<a href="register.html" class="btn btn-primary" style="margin-top:16px;">Register as Tipster</a>' +
+                '</div>';
+        }
     }
 };
 
-document.addEventListener('DOMContentLoaded', function() {
-    Leaderboard.init();
-});
+// Helper function to escape HTML
+function escapeHTML(str) {
+    if (!str) return '';
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
 
-window.Leaderboard = Leaderboard;
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    Leaderboard.load('all');
+});
