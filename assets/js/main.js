@@ -61,7 +61,7 @@
 // SECURE CONFIGURATION
 // ============================================
 var CONFIG = {
-    API_BASE_URL: 'http://localhost/bashiri-nasi/api/',
+    API_BASE_URL: 'https://cybermsouth-oss.github.io/bashir-nasi/',
     SESSION_TIMEOUT: 30 * 60 * 1000, // 30 minutes
     MAX_LOGIN_ATTEMPTS: 5,
     LOGIN_LOCKOUT_TIME: 60 * 60 * 1000,
