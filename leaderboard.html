@@ -1,19 +1,16 @@
 <!DOCTYPE html>
-<html lang="sw">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Best Professionals | Bashiri Nasi</title>
-  <!-- NEW FEATURE MODULES (FEB 2025) -->
-<script src="assets/js/pwa-app.js"></script>
-<script src="assets/js/rating-system.js"></script>
-<script src="assets/js/leaderboard.js"></script>
-<script src="assets/js/multi-language.js"></script>
-<script src="assets/js/match-calendar.js"></script>
+  <title>Top Tipsters | Bashiri Nasi</title>
+  
+  <!-- Stylesheets -->
   <link rel="stylesheet" href="assets/css/style.css">
   <link rel="stylesheet" href="assets/css/new-features.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
   <style>
     .leaderboard-hero {
       background: linear-gradient(135deg, #022C22, #064E3B);
@@ -107,9 +104,6 @@
       color: #6B7280;
       font-size: 0.65rem;
     }
-    .leaderboard-medal {
-      font-size: 2rem;
-    }
     @media (max-width: 600px) {
       .leaderboard-card {
         flex-direction: column;
@@ -122,56 +116,102 @@
   </style>
 </head>
 <body>
+  
+  <!-- Header -->
   <header class="site-header">
     <div class="container header-grid">
       <a class="brand" href="index.html">⚡ Bashiri Nasi</a>
-      <nav class="nav-links">
+      <nav class="nav-links" id="navLinks">
         <a href="index.html" class="btn btn-outline btn-sm">Home</a>
+        <a href="leaderboard.html" class="btn btn-outline btn-sm">Top Tipsters</a>
         <a href="login.html" class="btn btn-outline btn-sm">Login</a>
         <a href="register.html" class="btn btn-primary btn-sm">Register</a>
       </nav>
     </div>
   </header>
 
+  <!-- Hero Section -->
   <section class="leaderboard-hero">
     <div class="container">
-      <h1>🏆 Best Professionals</h1>
-      <p style="color:rgba(255,255,255,0.8);font-size:1.1rem;">Look out for tipsters with high win rates</p>
-     <div class="leaderboard-tabs">
-    <button class="leaderboard-tab active" onclick="Leaderboard.load('all')">All Time</button>
-    <button class="leaderboard-tab" onclick="Leaderboard.load('monthly')">This Month</button>
-    <button class="leaderboard-tab" onclick="Leaderboard.load('weekly')">This Week</button>
-    <button class="leaderboard-tab" onclick="Leaderboard.load('winrate')">By Win Rate</button>
-</div>
+      <h1>🏆 Top Tipsters</h1>
+      <p style="color:rgba(255,255,255,0.8);font-size:1.1rem;">See the tipsters with the highest win rates</p>
+      
+      <div class="leaderboard-tabs">
+        <button class="leaderboard-tab active" onclick="Leaderboard.load('all')">All Time</button>
+        <button class="leaderboard-tab" onclick="Leaderboard.load('monthly')">This Month</button>
+        <button class="leaderboard-tab" onclick="Leaderboard.load('weekly')">This Week</button>
+        <button class="leaderboard-tab" onclick="Leaderboard.load('winrate')">By Win Rate</button>
+      </div>
     </div>
   </section>
 
+  <!-- Leaderboard List -->
   <div class="container">
     <div class="leaderboard-list" id="leaderboardList">
       <div style="text-align:center;padding:40px;">
         <i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#059669;"></i>
-        <p>Friends with us</p>
+        <p>Loading top tipsters...</p>
       </div>
     </div>
   </div>
 
+  <!-- Footer -->
   <footer class="site-footer">
     <div class="container">
       <div class="footer-content">
         <span class="brand">⚡ Bashiri Nasi</span>
         <div class="footer-links">
           <a href="index.html">Home</a>
+          <a href="leaderboard.html">Top Tipsters</a>
           <a href="login.html">Login</a>
           <a href="register.html">Register</a>
         </div>
       </div>
-      <div class="footer-bottom"><p>© 2025 Bashiri Nasi. All rights reserved.</p></div>
+      <div class="footer-bottom">
+        <p>© 2025 Bashiri Nasi. All rights reserved.</p>
+      </div>
     </div>
   </footer>
 
+  <!-- Toast Container -->
   <div id="toastContainer"></div>
   
+  <!-- Dark Mode Toggle -->
+  <button class="dark-mode-toggle" id="darkModeToggle" onclick="toggleDarkMode()" title="Toggle Dark Mode">
+    <i class="fas fa-moon"></i>
+  </button>
+
+  <!-- Scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+  
+  <!-- Main application script (contains apiCall function) -->
+  <script src="assets/js/script.js"></script>
+  
+  <!-- Leaderboard module -->
   <script src="assets/js/leaderboard.js"></script>
+  
+  <!-- Dark mode initialization -->
+  <script>
+    // Initialize dark mode
+    (function() {
+      var saved = localStorage.getItem('bashiri_theme');
+      if (saved === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        var btn = document.getElementById('darkModeToggle');
+        if (btn) btn.innerHTML = '<i class="fas fa-sun"></i>';
+      }
+    })();
+    
+    // Toggle dark mode
+    function toggleDarkMode() {
+      var current = document.documentElement.getAttribute('data-theme');
+      var next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('bashiri_theme', next);
+      var btn = document.getElementById('darkModeToggle');
+      if (btn) btn.innerHTML = next === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    }
+  </script>
+
 </body>
 </html>
