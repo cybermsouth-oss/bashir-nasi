@@ -1,15 +1,70 @@
 // ============================================
-// BASHIRI NASI - LEADERBOARD MODULE v2.0
-// REAL API DATA ONLY | ENGLISH | CLEAN DISPLAY
+// BASHIRI NASI - LEADERBOARD MODULE v3.0
+// STANDALONE VERSION - Built-in API Caller
 // ============================================
 
+// API Configuration
+var CONFIG = {
+    API_BASE_URL: 'https://cybermsouth-oss.github.io/bashir-nasi/api/',
+    API_TIMEOUT: 10000
+};
+
+// Built-in API caller
+function apiCall(endpoint, method, data) {
+    return new Promise(function(resolve, reject) {
+        var xhr = new XMLHttpRequest();
+        var url = CONFIG.API_BASE_URL + endpoint;
+        
+        if (method === 'GET' && data) {
+            var params = [];
+            for (var key in data) {
+                if (data.hasOwnProperty(key) && data[key] !== null) {
+                    params.push(encodeURIComponent(key) + '=' + encodeURIComponent(data[key]));
+                }
+            }
+            if (params.length > 0) url += '?' + params.join('&');
+        }
+        
+        xhr.open(method, url, true);
+        xhr.timeout = CONFIG.API_TIMEOUT;
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        
+        xhr.onload = function() {
+            try {
+                var response = JSON.parse(xhr.responseText);
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    resolve(response);
+                } else {
+                    reject(response || { success: false, message: 'Server error' });
+                }
+            } catch(e) {
+                reject({ success: false, message: 'Invalid response' });
+            }
+        };
+        
+        xhr.onerror = function() {
+            reject({ success: false, message: 'Network error' });
+        };
+        
+        xhr.ontimeout = function() {
+            reject({ success: false, message: 'Timeout' });
+        };
+        
+        if (method === 'GET') {
+            xhr.send();
+        } else {
+            xhr.send(JSON.stringify(data || {}));
+        }
+    });
+}
+
+// Leaderboard Module
 var Leaderboard = {
     currentFilter: 'all',
     
     load: function(filter) {
         this.currentFilter = filter;
         
-        // Update active tabs
         document.querySelectorAll('.leaderboard-tab').forEach(function(tab) {
             tab.classList.remove('active');
         });
@@ -17,15 +72,14 @@ var Leaderboard = {
         var tabs = document.querySelectorAll('.leaderboard-tab');
         tabs.forEach(function(tab) {
             var text = tab.textContent.toLowerCase();
-            if ((filter === 'all' && text.includes('all')) || 
-                (filter === 'monthly' && text.includes('month')) || 
-                (filter === 'weekly' && text.includes('week')) || 
-                (filter === 'winrate' && text.includes('win rate'))) {
+            if ((filter === 'all' && (text.includes('all') || text.includes('wote'))) || 
+                (filter === 'monthly' && (text.includes('month') || text.includes('mwezi'))) || 
+                (filter === 'weekly' && (text.includes('week') || text.includes('wiki'))) || 
+                (filter === 'winrate' && (text.includes('win rate') || text.includes('winrate')))) {
                 tab.classList.add('active');
             }
         });
         
-        // Show loading
         var container = document.getElementById('leaderboardList');
         if (container) {
             container.innerHTML = '<div style="text-align:center;padding:40px;">' +
@@ -40,18 +94,6 @@ var Leaderboard = {
         var self = this;
         var container = document.getElementById('leaderboardList');
         
-        if (typeof apiCall !== 'function') {
-            if (container) {
-                container.innerHTML = '<div style="text-align:center;padding:60px;">' +
-                    '<div style="font-size:3rem;margin-bottom:16px;">🔌</div>' +
-                    '<h3>API Not Connected</h3>' +
-                    '<p style="color:#6B7280;">The API connection is not available.</p>' +
-                    '<button class="btn btn-primary" style="margin-top:16px;" onclick="Leaderboard.load(\'all\')">' +
-                    '<i class="fas fa-sync-alt"></i> Retry</button></div>';
-            }
-            return;
-        }
-        
         apiCall('users.php?role=tipster', 'GET')
             .then(function(response) {
                 if (response.success && response.data && response.data.length > 0) {
@@ -63,11 +105,9 @@ var Leaderboard = {
                         .catch(function() {
                             if (container) {
                                 container.innerHTML = '<div style="text-align:center;padding:60px;">' +
-                                    '<div style="font-size:3rem;margin-bottom:16px;">⚠️</div>' +
-                                    '<h3>Failed to Load Data</h3>' +
-                                    '<p style="color:#6B7280;">Could not retrieve tips. Please try again.</p>' +
-                                    '<button class="btn btn-primary" style="margin-top:16px;" onclick="Leaderboard.load(\'all\')">' +
-                                    '<i class="fas fa-sync-alt"></i> Retry</button></div>';
+                                    '<div style="font-size:3rem;">⚠️</div>' +
+                                    '<h3>Failed to Load Tips</h3>' +
+                                    '<button class="btn btn-primary" style="margin-top:16px;" onclick="Leaderboard.load(\'all\')">Retry</button></div>';
                             }
                         });
                 } else {
@@ -77,11 +117,10 @@ var Leaderboard = {
             .catch(function() {
                 if (container) {
                     container.innerHTML = '<div style="text-align:center;padding:60px;">' +
-                        '<div style="font-size:3rem;margin-bottom:16px;">⚠️</div>' +
-                        '<h3>Server Connection Failed</h3>' +
-                        '<p style="color:#6B7280;">Unable to reach the server. Check your connection.</p>' +
-                        '<button class="btn btn-primary" style="margin-top:16px;" onclick="Leaderboard.load(\'all\')">' +
-                        '<i class="fas fa-sync-alt"></i> Retry</button></div>';
+                        '<div style="font-size:3rem;">⚠️</div>' +
+                        '<h3>Cannot Connect to Server</h3>' +
+                        '<p style="color:#6B7280;">Make sure your API server is running.</p>' +
+                        '<button class="btn btn-primary" style="margin-top:16px;" onclick="Leaderboard.load(\'all\')">Retry</button></div>';
                 }
             });
     },
@@ -90,7 +129,6 @@ var Leaderboard = {
         var container = document.getElementById('leaderboardList');
         if (!container) return;
         
-        // Build stats for each tipster
         var stats = tipsters.map(function(t) {
             var myTips = tips.filter(function(tip) { return tip.tipster_id === t.id; });
             var won = myTips.filter(function(tip) { return tip.result === 'won'; }).length;
@@ -109,10 +147,8 @@ var Leaderboard = {
             };
         });
         
-        // Only show tipsters with tips
         stats = stats.filter(function(s) { return s.total > 0; });
         
-        // Sort by win rate
         stats.sort(function(a, b) {
             if (b.winRate !== a.winRate) return b.winRate - a.winRate;
             return b.total - a.total;
@@ -131,7 +167,6 @@ var Leaderboard = {
             var rank = i + 1;
             var rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
             var medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
-            
             var color = s.winRate >= 70 ? '#059669' : s.winRate >= 50 ? '#F59E0B' : '#EF4444';
             
             html += '<div class="leaderboard-card">';
@@ -154,11 +189,10 @@ var Leaderboard = {
     showEmpty: function() {
         var container = document.getElementById('leaderboardList');
         if (container) {
-            container.innerHTML = '<div style="text-align:center;padding:60px 20px;">' +
-                '<div style="font-size:3rem;margin-bottom:16px;">🏆</div>' +
+            container.innerHTML = '<div style="text-align:center;padding:60px;">' +
+                '<div style="font-size:3rem;">🏆</div>' +
                 '<h3>No Tipsters Found</h3>' +
-                '<p style="color:#6B7280;">There are no tipsters with verified tips yet.</p>' +
-                '<a href="register.html" class="btn btn-primary" style="margin-top:16px;">Become a Tipster</a></div>';
+                '<p style="color:#6B7280;">No tipsters with verified tips yet.</p></div>';
         }
     }
 };
