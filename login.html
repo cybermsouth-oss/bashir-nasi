@@ -1,44 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login | Bashiri Nasi</title>
-  <link rel="stylesheet" href="assets/css/new-features.css" />
-  <link rel="stylesheet" href="assets/css/style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-  <!-- 1. CryptoJS (CDN) - Required for SHA-256 and AES -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
-
-<!-- 2. Main Application (EVERYTHING in one file) -->
-<script src="assets/js/main.js"></script>
-  <style>
-    .auth-wrapper { min-height: calc(100vh - 160px); display: flex; align-items: center; justify-content: center; padding: 40px 20px; background: linear-gradient(135deg, var(--bg-primary), var(--primary-soft)); }
-    .auth-container { max-width: 420px; width: 100%; }
-    .auth-card { background: var(--card-bg); border-radius: var(--radius-xl); box-shadow: var(--shadow-xl); overflow: hidden; }
-    .auth-header { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); padding: 36px 28px; text-align: center; position: relative; }
-    .auth-header::after { content: ''; position: absolute; bottom: -16px; left: 0; right: 0; height: 16px; background: var(--card-bg); border-radius: 16px 16px 0 0; }
-    .auth-icon { width: 65px; height: 65px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 1.8rem; color: white; }
-    .auth-header h2 { color: white; font-size: 1.4rem; margin-bottom: 4px; }
-    .auth-header p { color: rgba(255,255,255,0.8); font-size: 0.85rem; margin: 0; }
-    .auth-body { padding: 30px 26px; }
-    .auth-footer { text-align: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color); font-size: 0.85rem; }
-    .auth-footer a { font-weight: 600; }
-  </style>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
+
   <header class="site-header">
     <div class="container header-grid">
       <a class="brand" href="index.html">⚡ Bashiri Nasi</a>
       <nav class="nav-links" id="navLinks">
-        <a href="index.html#tips" class="nav-link">Tips</a>
-        <a href="leaderboard.html" class="nav-link">Leaderboard</a>
-      </nav>
-      <div class="nav-buttons">
-        <a href="login.html" class="btn btn-outline btn-sm">Login</a>
+        <a href="index.html" class="btn btn-outline btn-sm">Home</a>
         <a href="register.html" class="btn btn-primary btn-sm">Register</a>
-      </div>
+      </nav>
     </div>
   </header>
 
@@ -46,56 +24,63 @@
     <div class="auth-container">
       <div class="auth-card">
         <div class="auth-header">
-          <div class="auth-icon"><i class="fas fa-futbol"></i></div>
-          <h2>Welcome Back!</h2>
-          <p>Sign in to access your account</p>
+          <div class="auth-icon"><i class="fas fa-sign-in-alt"></i></div>
+          <h2>Welcome Back</h2>
+          <p>Login to your account</p>
         </div>
         <div class="auth-body">
           <form id="loginForm">
             <div class="form-group">
-              <label class="form-label">Email</label>
-              <input 
-                type="text" 
-                class="form-input" 
-                id="phone" 
-                placeholder="Enter username or phone number" 
-                required 
-                autocomplete="username"
-                autofocus
-              />
+              <label class="form-label">Phone or Email</label>
+              <input type="text" id="phone" class="form-input" placeholder="0712345678 or email@example.com" required>
             </div>
             <div class="form-group">
               <label class="form-label">Password</label>
-              <input type="password" class="form-input" id="password" placeholder="Enter password" required />
+              <input type="password" id="password" class="form-input" placeholder="Enter your password" required>
             </div>
-            <button type="submit" class="btn btn-primary btn-lg btn-block">Sign in</button>
+            <button type="submit" class="btn btn-primary btn-block btn-lg">
+              <i class="fas fa-sign-in-alt"></i> Login
+            </button>
           </form>
           <div class="auth-footer">
-            <p>No account? <a href="register.html">Register</a></p>
+            Don't have an account? <a href="register.html">Register here</a>
+          </div>
+          <div class="demo-info" style="margin-top:16px;padding:12px;background:var(--bg-primary);border-radius:10px;text-align:center;font-size:0.8rem;">
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <footer class="site-footer">
-    <div class="container">
-      <div class="footer-content">
-        <span class="brand">⚡ Bashiri Nasi</span>
-        <div class="footer-links">
-          <a href="index.html">Home</a>
-          <a href="register.html">Register</a>
-        </div>
-      </div>
-      <div class="footer-bottom"><p>© 2025 Bashiri Nasi. All rights reserved.</p></div>
-    </div>
-  </footer>
-
   <div id="toastContainer"></div>
+  
   <button class="dark-mode-toggle" id="darkModeToggle" onclick="toggleDarkMode()">
     <i class="fas fa-moon"></i>
   </button>
+
+  <!-- IMPORTANT: Load main script FIRST -->
+  <script src="assets/js/script.js"></script>
   
-  <script src="assets/js/main.js"></script>
+  <script>
+    // Dark mode toggle
+    function toggleDarkMode() {
+      var current = document.documentElement.getAttribute('data-theme');
+      var next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('bashiri_theme', next);
+      var btn = document.getElementById('darkModeToggle');
+      if (btn) btn.innerHTML = next === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    }
+    
+    // Init dark mode
+    (function() {
+      var saved = localStorage.getItem('bashiri_theme');
+      if (saved === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        var btn = document.getElementById('darkModeToggle');
+        if (btn) btn.innerHTML = '<i class="fas fa-sun"></i>';
+      }
+    })();
+  </script>
 </body>
 </html>
