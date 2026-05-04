@@ -1,6 +1,6 @@
 // ============================================
-// BASHIRI NASI - LEADERBOARD MODULE
-// REAL API DATA ONLY - No Demo/Fallback Data
+// BASHIRI NASI - LEADERBOARD MODULE v2.0
+// REAL API DATA ONLY | ENGLISH | CLEAN DISPLAY
 // ============================================
 
 var Leaderboard = {
@@ -9,33 +9,30 @@ var Leaderboard = {
     load: function(filter) {
         this.currentFilter = filter;
         
-        // Update active tab
+        // Update active tabs
         document.querySelectorAll('.leaderboard-tab').forEach(function(tab) {
             tab.classList.remove('active');
         });
         
-        // Set active tab
         var tabs = document.querySelectorAll('.leaderboard-tab');
         tabs.forEach(function(tab) {
-            var tabText = tab.textContent.toLowerCase();
-            if ((filter === 'all' && tabText.includes('wote')) || 
-                (filter === 'monthly' && tabText.includes('mwezi')) || 
-                (filter === 'weekly' && tabText.includes('wiki')) || 
-                (filter === 'winrate' && tabText.includes('win rate'))) {
+            var text = tab.textContent.toLowerCase();
+            if ((filter === 'all' && text.includes('all')) || 
+                (filter === 'monthly' && text.includes('month')) || 
+                (filter === 'weekly' && text.includes('week')) || 
+                (filter === 'winrate' && text.includes('win rate'))) {
                 tab.classList.add('active');
             }
         });
         
-        // Show loading state
+        // Show loading
         var container = document.getElementById('leaderboardList');
         if (container) {
             container.innerHTML = '<div style="text-align:center;padding:40px;">' +
                 '<i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#059669;"></i>' +
-                '<p>Loading tipsters from server...</p>' +
-                '</div>';
+                '<p>Loading top tipsters...</p></div>';
         }
         
-        // Fetch from API only
         this.fetchTipsters(filter);
     },
     
@@ -43,25 +40,21 @@ var Leaderboard = {
         var self = this;
         var container = document.getElementById('leaderboardList');
         
-        // Check if API function exists
         if (typeof apiCall !== 'function') {
             if (container) {
-                container.innerHTML = '<div style="text-align:center;padding:60px 20px;">' +
-                    '<div style="font-size:3rem;margin-bottom:16px;">⚠️</div>' +
-                    '<h3>Cannot Connect to Server</h3>' +
-                    '<p style="color:#6B7280;">Please make sure the API is properly configured.</p>' +
+                container.innerHTML = '<div style="text-align:center;padding:60px;">' +
+                    '<div style="font-size:3rem;margin-bottom:16px;">🔌</div>' +
+                    '<h3>API Not Connected</h3>' +
+                    '<p style="color:#6B7280;">The API connection is not available.</p>' +
                     '<button class="btn btn-primary" style="margin-top:16px;" onclick="Leaderboard.load(\'all\')">' +
-                    '<i class="fas fa-sync-alt"></i> Try Again</button>' +
-                    '</div>';
+                    '<i class="fas fa-sync-alt"></i> Retry</button></div>';
             }
             return;
         }
         
-        // Fetch tipsters from real API
         apiCall('users.php?role=tipster', 'GET')
             .then(function(response) {
                 if (response.success && response.data && response.data.length > 0) {
-                    // Fetch tips for statistics
                     apiCall('tips.php?action=all', 'GET')
                         .then(function(tipResponse) {
                             var tips = tipResponse.success ? (tipResponse.data || []) : [];
@@ -69,13 +62,12 @@ var Leaderboard = {
                         })
                         .catch(function() {
                             if (container) {
-                                container.innerHTML = '<div style="text-align:center;padding:60px 20px;">' +
+                                container.innerHTML = '<div style="text-align:center;padding:60px;">' +
                                     '<div style="font-size:3rem;margin-bottom:16px;">⚠️</div>' +
-                                    '<h3>Failed to Load Tips</h3>' +
-                                    '<p style="color:#6B7280;">Please try again in a moment.</p>' +
+                                    '<h3>Failed to Load Data</h3>' +
+                                    '<p style="color:#6B7280;">Could not retrieve tips. Please try again.</p>' +
                                     '<button class="btn btn-primary" style="margin-top:16px;" onclick="Leaderboard.load(\'all\')">' +
-                                    '<i class="fas fa-sync-alt"></i> Try Again</button>' +
-                                    '</div>';
+                                    '<i class="fas fa-sync-alt"></i> Retry</button></div>';
                             }
                         });
                 } else {
@@ -84,13 +76,12 @@ var Leaderboard = {
             })
             .catch(function() {
                 if (container) {
-                    container.innerHTML = '<div style="text-align:center;padding:60px 20px;">' +
+                    container.innerHTML = '<div style="text-align:center;padding:60px;">' +
                         '<div style="font-size:3rem;margin-bottom:16px;">⚠️</div>' +
-                        '<h3>Cannot Connect to Server</h3>' +
-                        '<p style="color:#6B7280;">Make sure the server is running and try again.</p>' +
+                        '<h3>Server Connection Failed</h3>' +
+                        '<p style="color:#6B7280;">Unable to reach the server. Check your connection.</p>' +
                         '<button class="btn btn-primary" style="margin-top:16px;" onclick="Leaderboard.load(\'all\')">' +
-                        '<i class="fas fa-sync-alt"></i> Try Again</button>' +
-                        '</div>';
+                        '<i class="fas fa-sync-alt"></i> Retry</button></div>';
                 }
             });
     },
@@ -99,78 +90,60 @@ var Leaderboard = {
         var container = document.getElementById('leaderboardList');
         if (!container) return;
         
-        // Calculate stats for each tipster
-        var tipsterStats = tipsters.map(function(tipster) {
-            var tipsterTips = tips.filter(function(t) {
-                return t.tipster_id === tipster.id;
-            });
-            
-            var total = tipsterTips.length;
-            var won = tipsterTips.filter(function(t) { return t.result === 'won'; }).length;
-            var lost = tipsterTips.filter(function(t) { return t.result === 'lost'; }).length;
+        // Build stats for each tipster
+        var stats = tipsters.map(function(t) {
+            var myTips = tips.filter(function(tip) { return tip.tipster_id === t.id; });
+            var won = myTips.filter(function(tip) { return tip.result === 'won'; }).length;
+            var lost = myTips.filter(function(tip) { return tip.result === 'lost'; }).length;
+            var total = myTips.length;
             var winRate = (won + lost) > 0 ? Math.round((won / (won + lost)) * 100) : 0;
             
             return {
-                id: tipster.id,
-                name: tipster.name || 'Tipster',
-                bio: tipster.bio || '',
-                totalTips: total,
+                id: t.id,
+                name: t.name || 'Unknown',
+                bio: t.bio || '',
+                total: total,
                 won: won,
                 lost: lost,
                 winRate: winRate
             };
         });
         
-        // Filter out tipsters with no tips
-        var filtered = tipsterStats.filter(function(s) {
-            return s.totalTips > 0;
-        });
+        // Only show tipsters with tips
+        stats = stats.filter(function(s) { return s.total > 0; });
         
-        // Sort by win rate (highest first), then by total tips
-        filtered.sort(function(a, b) {
+        // Sort by win rate
+        stats.sort(function(a, b) {
             if (b.winRate !== a.winRate) return b.winRate - a.winRate;
-            return b.totalTips - a.totalTips;
+            return b.total - a.total;
         });
         
-        // Top 20 only
-        filtered = filtered.slice(0, 20);
+        stats = stats.slice(0, 20);
         
-        if (filtered.length === 0) {
+        if (stats.length === 0) {
             this.showEmpty();
             return;
         }
         
         var html = '';
         
-        filtered.forEach(function(tipster, index) {
-            var rank = index + 1;
+        stats.forEach(function(s, i) {
+            var rank = i + 1;
             var rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
             var medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
             
-            var winRateColor = tipster.winRate >= 70 ? '#059669' : 
-                               tipster.winRate >= 50 ? '#F59E0B' : '#EF4444';
+            var color = s.winRate >= 70 ? '#059669' : s.winRate >= 50 ? '#F59E0B' : '#EF4444';
             
             html += '<div class="leaderboard-card">';
-            html += '<div class="leaderboard-rank ' + rankClass + '">';
-            html += medal || rank;
-            html += '</div>';
+            html += '<div class="leaderboard-rank ' + rankClass + '">' + (medal || rank) + '</div>';
             html += '<div class="leaderboard-info">';
-            html += '<div class="leaderboard-name">' + escapeHTML(tipster.name) + '</div>';
-            html += '<div class="leaderboard-bio">' + escapeHTML(tipster.bio) + '</div>';
+            html += '<div class="leaderboard-name">' + escapeHTML(s.name) + '</div>';
+            if (s.bio) html += '<div class="leaderboard-bio">' + escapeHTML(s.bio) + '</div>';
             html += '</div>';
             html += '<div class="leaderboard-stats">';
-            html += '<div class="leaderboard-stat">';
-            html += '<div class="leaderboard-stat-value" style="color:' + winRateColor + ';font-size:1.2rem;">' + tipster.winRate + '%</div>';
-            html += '<div class="leaderboard-stat-label">Win Rate</div>';
-            html += '</div>';
-            html += '<div class="leaderboard-stat">';
-            html += '<div class="leaderboard-stat-value">' + tipster.won + '/' + tipster.lost + '</div>';
-            html += '<div class="leaderboard-stat-label">W/L</div>';
-            html += '</div>';
-            html += '<div class="leaderboard-stat">';
-            html += '<div class="leaderboard-stat-value">' + tipster.totalTips + '</div>';
-            html += '<div class="leaderboard-stat-label">Total</div>';
-            html += '</div>';
+            html += '<div class="leaderboard-stat"><div class="leaderboard-stat-value" style="color:' + color + ';font-size:1.2rem;">' + s.winRate + '%</div><div class="leaderboard-stat-label">Win Rate</div></div>';
+            html += '<div class="leaderboard-stat"><div class="leaderboard-stat-value">' + s.won + '/' + s.lost + '</div><div class="leaderboard-stat-label">W/L</div></div>';
+            html += '<div class="leaderboard-stat"><div class="leaderboard-stat-value">' + s.total + '</div><div class="leaderboard-stat-label">Tips</div></div>';
             html += '</div>';
             html += '</div>';
         });
@@ -183,23 +156,20 @@ var Leaderboard = {
         if (container) {
             container.innerHTML = '<div style="text-align:center;padding:60px 20px;">' +
                 '<div style="font-size:3rem;margin-bottom:16px;">🏆</div>' +
-                '<h3>No Tipsters Yet</h3>' +
-                '<p style="color:#6B7280;">Tipsters will appear here once they start posting tips.</p>' +
-                '<a href="register.html" class="btn btn-primary" style="margin-top:16px;">Register as Tipster</a>' +
-                '</div>';
+                '<h3>No Tipsters Found</h3>' +
+                '<p style="color:#6B7280;">There are no tipsters with verified tips yet.</p>' +
+                '<a href="register.html" class="btn btn-primary" style="margin-top:16px;">Become a Tipster</a></div>';
         }
     }
 };
 
-// Helper function to escape HTML
 function escapeHTML(str) {
     if (!str) return '';
-    var div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+    var d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
 }
 
-// Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     Leaderboard.load('all');
 });
