@@ -1,165 +1,180 @@
 <?php
 // ============================================
-// BASHIRI NASI - AUTH API (FULLY FIXED)
+// BASHIRI NASI - AUTHENTICATION API
 // ============================================
-require_once __DIR__ . '/config.php';
-
-// Enable error reporting for debugging
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+require_once 'config.php';
 
 $action = $_GET['action'] ?? '';
+$method = $_SERVER['REQUEST_METHOD'];
 
 switch ($action) {
     case 'login':
+        if ($method !== 'POST') sendResponse(['success' => false, 'message' => 'Method not allowed'], 405);
         handleLogin();
         break;
+        
     case 'register':
+        if ($method !== 'POST') sendResponse(['success' => false, 'message' => 'Method not allowed'], 405);
         handleRegister();
         break;
+        
+    case 'logout':
+        if ($method !== 'POST') sendResponse(['success' => false, 'message' => 'Method not allowed'], 405);
+        handleLogout();
+        break;
+        
     default:
-        jsonResponse(['success' => false, 'message' => 'Invalid action'], 400);
+        sendResponse(['success' => false, 'message' => 'Invalid action'], 400);
 }
 
 function handleLogin() {
-    $data = getRequestBody();
+    $data = getJSONInput();
+    $pdo = getDB();
     
-    if (empty($data['phone']) || empty($data['password'])) {
-        jsonResponse(['success' => false, 'message' => 'Phone and password required'], 400);
+    $phone = sanitize($data['phone'] ?? '');
+    $email = sanitize($data['email'] ?? '');
+    $password = $data['password'] ?? '';
+    
+    if ((!$phone && !$email) || !$password) {
+        sendResponse(['success' => false, 'message' => 'Phone/email and password are required'], 400);
     }
     
-    $input = sanitize($data['phone']);
-    $password = $data['password'];
-    
-    error_log("Login attempt - Input: $input, Password length: " . strlen($password));
-    
-    try {
-        $pdo = getDB();
-        
-        // Find user by phone OR name
-        $stmt = $pdo->prepare("SELECT * FROM users WHERE (phone = :phone OR name = :name) AND is_active = 1 LIMIT 1");
-        $stmt->execute([':phone' => $input, ':name' => $input]);
-        $user = $stmt->fetch();
-        
-        if (!$user) {
-            error_log("User not found: $input");
-            jsonResponse(['success' => false, 'message' => 'Account not found'], 401);
+    // Find user by phone or email
+    if ($email) {
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ? AND is_active = 1");
+        $stmt->execute([$email]);
+    } else {
+        $validPhone = validatePhone($phone);
+        if (!$validPhone) {
+            sendResponse(['success' => false, 'message' => 'Invalid phone number format'], 400);
         }
-        
-        error_log("User found: " . $user['name'] . " - Role: " . $user['role']);
-        error_log("Stored password hash: " . $user['password']);
-        
-        // Try different password verification methods
-        $passwordValid = false;
-        
-        // Method 1: Caesar cipher (for your existing data)
-        $caesarHash = '';
-        for ($i = 0; $i < strlen($password); $i++) {
-            $caesarHash .= chr(ord($password[$i]) + 7);
-        }
-        error_log("Calculated Caesar hash: " . $caesarHash);
-        
-        if ($caesarHash === $user['password']) {
-            $passwordValid = true;
-            error_log("Password matched using Caesar cipher");
-        }
-        
-        // Method 2: Try bcrypt
-        if (!$passwordValid && password_verify($password, $user['password'])) {
-            $passwordValid = true;
-            error_log("Password matched using bcrypt");
-        }
-        
-        // Method 3: Direct comparison (for simple passwords)
-        if (!$passwordValid && $password === $user['password']) {
-            $passwordValid = true;
-            error_log("Password matched directly");
-        }
-        
-        if (!$passwordValid) {
-            error_log("Password verification failed");
-            jsonResponse(['success' => false, 'message' => 'Incorrect password'], 401);
-        }
-        
-        // Update login info
-        try {
-            $stmt = $pdo->prepare("UPDATE users SET login_count = login_count + 1, last_login = NOW(), last_active = NOW() WHERE id = :id");
-            $stmt->execute([':id' => $user['id']]);
-        } catch (Exception $e) {
-            // Columns might not exist, ignore
-            error_log("Could not update login count: " . $e->getMessage());
-        }
-        
-        // Return user data (without password)
-        unset($user['password']);
-        
-        jsonResponse([
-            'success' => true,
-            'message' => 'Login successful',
-            'user' => [
-                'id' => $user['id'],
-                'name' => $user['name'],
-                'phone' => $user['phone'],
-                'role' => $user['role'],
-                'bio' => $user['bio'] ?? ''
-            ]
-        ]);
-        
-    } catch (Exception $e) {
-        error_log("Login error: " . $e->getMessage());
-        jsonResponse(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE phone = ? AND is_active = 1");
+        $stmt->execute([$validPhone]);
     }
+    
+    $user = $stmt->fetch();
+    
+    // Check if user exists
+    if (!$user) {
+        sendResponse(['success' => false, 'message' => 'Invalid credentials'], 401);
+    }
+    
+    // Check if account is locked
+    if ($user['locked_until'] && strtotime($user['locked_until']) > time()) {
+        $remaining = ceil((strtotime($user['locked_until']) - time()) / 60);
+        sendResponse([
+            'success' => false,
+            'message' => "Account locked. Try again in {$remaining} minutes"
+        ], 429);
+    }
+    
+    // Verify password
+    if (!verifyPassword($password, $user['password_hash'])) {
+        // Increment login attempts
+        $attempts = $user['login_attempts'] + 1;
+        $lockedUntil = null;
+        
+        if ($attempts >= MAX_LOGIN_ATTEMPTS) {
+            $lockedUntil = date('Y-m-d H:i:s', time() + LOGIN_LOCKOUT_TIME);
+        }
+        
+        $stmt = $pdo->prepare("UPDATE users SET login_attempts = ?, locked_until = ? WHERE id = ?");
+        $stmt->execute([$attempts, $lockedUntil, $user['id']]);
+        
+        sendResponse(['success' => false, 'message' => 'Invalid credentials'], 401);
+    }
+    
+    // Reset login attempts on success
+    $token = generateToken();
+    $stmt = $pdo->prepare("UPDATE users SET login_attempts = 0, locked_until = NULL, last_login = NOW(), token = ? WHERE id = ?");
+    $stmt->execute([$token, $user['id']]);
+    
+    sendResponse([
+        'success' => true,
+        'message' => 'Login successful',
+        'user' => [
+            'id' => $user['id'],
+            'name' => $user['name'],
+            'phone' => $user['phone'],
+            'email' => $user['email'],
+            'role' => $user['role'],
+            'bio' => $user['bio'],
+            'token' => $token
+        ]
+    ]);
 }
 
 function handleRegister() {
-    $data = getRequestBody();
+    $data = getJSONInput();
+    $pdo = getDB();
     
-    if (empty($data['name']) || empty($data['phone']) || empty($data['password'])) {
-        jsonResponse(['success' => false, 'message' => 'All fields required'], 400);
+    $name = sanitize($data['name'] ?? '', 100);
+    $phone = sanitize($data['phone'] ?? '', 20);
+    $email = sanitize($data['email'] ?? '', 100);
+    $password = $data['password'] ?? '';
+    
+    // Validate inputs
+    if (!$name || strlen($name) < 2) {
+        sendResponse(['success' => false, 'message' => 'Name must be at least 2 characters'], 400);
     }
     
-    $name = sanitize($data['name']);
-    $phone = sanitize($data['phone']);
-    $password = $data['password'];
-    
-    if (strlen($password) < 6) {
-        jsonResponse(['success' => false, 'message' => 'Password must be 6+ characters'], 400);
+    $validPhone = validatePhone($phone);
+    if (!$validPhone) {
+        sendResponse(['success' => false, 'message' => 'Invalid phone number. Use format: 0712345678'], 400);
     }
     
-    try {
-        $pdo = getDB();
-        
-        // Check if phone exists
-        $stmt = $pdo->prepare("SELECT id FROM users WHERE phone = :phone LIMIT 1");
-        $stmt->execute([':phone' => $phone]);
+    if ($email && !validateEmail($email)) {
+        sendResponse(['success' => false, 'message' => 'Invalid email address'], 400);
+    }
+    
+    if (strlen($password) < MIN_PASSWORD_LENGTH) {
+        sendResponse(['success' => false, 'message' => 'Password must be at least ' . MIN_PASSWORD_LENGTH . ' characters'], 400);
+    }
+    
+    // Check password strength
+    if (!preg_match('/[A-Z]/', $password) || !preg_match('/[a-z]/', $password) || !preg_match('/[0-9]/', $password)) {
+        sendResponse(['success' => false, 'message' => 'Password must contain uppercase, lowercase letters and numbers'], 400);
+    }
+    
+    // Check if phone already exists
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE phone = ?");
+    $stmt->execute([$validPhone]);
+    if ($stmt->fetch()) {
+        sendResponse(['success' => false, 'message' => 'Phone number already registered'], 409);
+    }
+    
+    // Check if email already exists
+    if ($email) {
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+        $stmt->execute([$email]);
         if ($stmt->fetch()) {
-            jsonResponse(['success' => false, 'message' => 'Phone already registered'], 409);
+            sendResponse(['success' => false, 'message' => 'Email already registered'], 409);
         }
-        
-        // Create Caesar hash (matching your existing format)
-        $caesarHash = '';
-        for ($i = 0; $i < strlen($password); $i++) {
-            $caesarHash .= chr(ord($password[$i]) + 7);
-        }
-        
-        // Insert new user
-        $stmt = $pdo->prepare("INSERT INTO users (id, name, phone, password, role, bio, is_active, created_at) 
-                               VALUES (:id, :name, :phone, :password, 'user', 'Bettor', 1, NOW())");
-        $stmt->execute([
-            ':id' => 'user_' . time() . '_' . uniqid(),
-            ':name' => $name,
-            ':phone' => $phone,
-            ':password' => $caesarHash
-        ]);
-        
-        jsonResponse([
-            'success' => true,
-            'message' => 'Account created successfully!'
-        ], 201);
-        
-    } catch (Exception $e) {
-        error_log("Register error: " . $e->getMessage());
-        jsonResponse(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
     }
+    
+    // Create user
+    $id = generateToken(16); // Use UUID in production
+    $passwordHash = hashPassword($password);
+    
+    $stmt = $pdo->prepare("INSERT INTO users (id, name, phone, email, password_hash, role) VALUES (?, ?, ?, ?, ?, 'user')");
+    $stmt->execute([$id, $name, $validPhone, $email ?: null, $passwordHash]);
+    
+    sendResponse([
+        'success' => true,
+        'message' => 'Registration successful! Please login.'
+    ], 201);
+}
+
+function handleLogout() {
+    $data = getJSONInput();
+    $userId = $data['user_id'] ?? '';
+    
+    if ($userId) {
+        $pdo = getDB();
+        $stmt = $pdo->prepare("UPDATE users SET token = NULL WHERE id = ?");
+        $stmt->execute([$userId]);
+    }
+    
+    sendResponse(['success' => true, 'message' => 'Logged out successfully']);
 }
 ?>
