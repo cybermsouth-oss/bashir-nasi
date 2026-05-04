@@ -1,114 +1,104 @@
 <?php
 // ============================================
-// BASHIRI NASI - USERS API (FULLY FIXED)
+// BASHIRI NASI - USERS API
 // ============================================
-require_once __DIR__ . '/config.php';
+require_once 'config.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
+$action = $_GET['action'] ?? '';
 
-if ($method === 'GET') {
-    handleGetUsers();
-} elseif ($method === 'POST') {
-    handleCreateUser();
-} elseif ($method === 'DELETE') {
-    handleDeleteUser();
-} else {
-    jsonResponse(['success' => false, 'message' => 'Method not allowed'], 405);
+switch ($method) {
+    case 'GET':
+        handleGetUsers();
+        break;
+    case 'POST':
+        requireAdmin();
+        handleCreateUser();
+        break;
+    case 'DELETE':
+        requireAdmin();
+        handleDeleteUser();
+        break;
+    default:
+        sendResponse(['success' => false, 'message' => 'Method not allowed'], 405);
 }
 
 function handleGetUsers() {
-    try {
-        $pdo = getDB();
-        $role = $_GET['role'] ?? '';
-        
-        if ($role) {
-            $stmt = $pdo->prepare("SELECT id, name, phone, role, bio, is_active, login_count, last_login, created_at 
-                                   FROM users WHERE role = :role ORDER BY created_at DESC");
-            $stmt->execute([':role' => $role]);
-        } else {
-            $stmt = $pdo->query("SELECT id, name, phone, role, bio, is_active, login_count, last_login, created_at 
-                                 FROM users ORDER BY created_at DESC");
-        }
-        
-        jsonResponse(['success' => true, 'data' => $stmt->fetchAll()]);
-    } catch (Exception $e) {
-        jsonResponse(['success' => false, 'message' => $e->getMessage()], 500);
+    $pdo = getDB();
+    $role = $_GET['role'] ?? '';
+    
+    if ($role) {
+        $stmt = $pdo->prepare("SELECT id, name, phone, email, role, bio, is_active, created_at FROM users WHERE role = ? AND is_active = 1 ORDER BY created_at DESC");
+        $stmt->execute([$role]);
+    } else {
+        $stmt = $pdo->query("SELECT id, name, phone, email, role, bio, is_active, created_at FROM users WHERE is_active = 1 ORDER BY created_at DESC");
     }
+    
+    $users = $stmt->fetchAll();
+    
+    sendResponse([
+        'success' => true,
+        'data' => $users
+    ]);
 }
 
 function handleCreateUser() {
-    $data = getRequestBody();
+    $data = getJSONInput();
+    $pdo = getDB();
     
-    if (empty($data['name']) || empty($data['phone']) || empty($data['password']) || empty($data['role'])) {
-        jsonResponse(['success' => false, 'message' => 'Missing fields: name, phone, password, role required'], 400);
+    $name = sanitize($data['name'] ?? '', 100);
+    $phone = sanitize($data['phone'] ?? '', 20);
+    $password = $data['password'] ?? '';
+    $role = in_array($data['role'] ?? '', ['user', 'tipster']) ? $data['role'] : 'tipster';
+    $bio = sanitize($data['bio'] ?? '', 500);
+    
+    $validPhone = validatePhone($phone);
+    if (!$validPhone) {
+        sendResponse(['success' => false, 'message' => 'Invalid phone number'], 400);
     }
     
-    // Validate role
-    if (!in_array($data['role'], ['user', 'tipster', 'admin'])) {
-        jsonResponse(['success' => false, 'message' => 'Invalid role. Use: user, tipster, or admin'], 400);
-    }
+    $id = generateToken(16);
+    $passwordHash = hashPassword($password);
     
-    try {
-        $pdo = getDB();
-        
-        // Check if phone exists
-        $stmt = $pdo->prepare("SELECT id FROM users WHERE phone = :phone");
-        $stmt->execute([':phone' => sanitize($data['phone'])]);
-        if ($stmt->fetch()) {
-            jsonResponse(['success' => false, 'message' => 'Phone already exists'], 409);
-        }
-        
-        $userId = ($data['role'] === 'tipster' ? 'tipster_' : 'user_') . time() . '_' . uniqid();
-        $bio = $data['bio'] ?? ($data['role'] === 'tipster' ? 'Professional Tipster' : 'Bettor');
-        
-        $stmt = $pdo->prepare("INSERT INTO users (id, name, phone, password, role, bio, is_active, created_at) 
-                               VALUES (:id, :name, :phone, :password, :role, :bio, 1, NOW())");
-        $stmt->execute([
-            ':id' => $userId,
-            ':name' => sanitize($data['name']),
-            ':phone' => sanitize($data['phone']),
-            ':password' => password_hash($data['password'], PASSWORD_BCRYPT),
-            ':role' => $data['role'],
-            ':bio' => sanitize($bio)
-        ]);
-        
-        jsonResponse(['success' => true, 'message' => 'User created!', 'user_id' => $userId], 201);
-        
-    } catch (Exception $e) {
-        jsonResponse(['success' => false, 'message' => $e->getMessage()], 500);
-    }
+    $stmt = $pdo->prepare("INSERT INTO users (id, name, phone, password_hash, role, bio) VALUES (?, ?, ?, ?, ?, ?)");
+    $stmt->execute([$id, $name, $validPhone, $passwordHash, $role, $bio]);
+    
+    sendResponse([
+        'success' => true,
+        'message' => 'User created successfully',
+        'user' => [
+            'id' => $id,
+            'name' => $name,
+            'phone' => $validPhone,
+            'role' => $role
+        ]
+    ], 201);
 }
 
 function handleDeleteUser() {
-    $userId = $_GET['id'] ?? 0;
+    $userId = $_GET['id'] ?? '';
     
     if (!$userId) {
-        jsonResponse(['success' => false, 'message' => 'User ID required'], 400);
+        sendResponse(['success' => false, 'message' => 'User ID required'], 400);
     }
     
-    try {
-        $pdo = getDB();
-        
-        // Check if user exists
-        $stmt = $pdo->prepare("SELECT role FROM users WHERE id = :id");
-        $stmt->execute([':id' => $userId]);
-        $user = $stmt->fetch();
-        
-        if (!$user) {
-            jsonResponse(['success' => false, 'message' => 'User not found'], 404);
+    $pdo = getDB();
+    
+    // Don't allow deleting the last admin
+    $stmt = $pdo->prepare("SELECT role FROM users WHERE id = ?");
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch();
+    
+    if ($user && $user['role'] === 'admin') {
+        $adminCount = $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'admin'")->fetchColumn();
+        if ($adminCount <= 1) {
+            sendResponse(['success' => false, 'message' => 'Cannot delete the last admin'], 400);
         }
-        
-        if ($user['role'] === 'admin') {
-            jsonResponse(['success' => false, 'message' => 'Cannot delete admin user'], 403);
-        }
-        
-        // Soft delete (deactivate)
-        $stmt = $pdo->prepare("UPDATE users SET is_active = 0 WHERE id = :id");
-        $stmt->execute([':id' => $userId]);
-        
-        jsonResponse(['success' => true, 'message' => 'User deactivated']);
-    } catch (Exception $e) {
-        jsonResponse(['success' => false, 'message' => $e->getMessage()], 500);
     }
+    
+    $stmt = $pdo->prepare("DELETE FROM users WHERE id = ? AND role != 'admin'");
+    $stmt->execute([$userId]);
+    
+    sendResponse(['success' => true, 'message' => 'User deleted']);
 }
 ?>
