@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>System Monitor - Bashiri Nasi</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>📊 System Monitor Dashboard</h1>
+        
+        <div id="stats">
+            <div class="loading">Loading...</div>
+        </div>
+        
+        <div class="actions">
+            <button onclick="runCleanup()" class="btn btn-warning">🧹 Run Cleanup</button>
+            <button onclick="createBackup()" class="btn btn-primary">💾 Create Backup</button>
+            <button onclick="refreshAll()" class="btn btn-success">🔄 Refresh All</button>
+        </div>
+        
+        <div id="backups" style="margin-top: 20px;"></div>
+    </div>
+    
+    <script>
+        function loadStats() {
+            fetch('../api/monitor.php?action=stats')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('stats').innerHTML = `
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <h3>Users</h3>
+                                    <p>Total: ${data.stats.users.total}</p>
+                                    <p>Active: ${data.stats.users.active}</p>
+                                    <p>Tipsters: ${data.stats.users.tipsters}</p>
+                                </div>
+                                <div class="stat-card">
+                                    <h3>Tips</h3>
+                                    <p>Total: ${data.stats.tips.total}</p>
+                                    <p>Won: ${data.stats.tips.won}</p>
+                                    <p>Revenue: TZS ${data.stats.tips.total_revenue || 0}</p>
+                                </div>
+                                <div class="stat-card">
+                                    <h3>Storage</h3>
+                                    <p>Data: ${data.stats.storage.data_mb} MB</p>
+                                    <p>Index: ${data.stats.storage.index_mb} MB</p>
+                                    <p>Total: ${data.stats.storage.total_mb} MB</p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+        }
+        
+        function loadBackups() {
+            fetch('../api/backup.php?action=list')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && data.backups) {
+                        let html = '<h3>Recent Backups</h3><ul>';
+                        data.backups.forEach(b => {
+                            html += `<li>${b.name} - ${b.size} - ${b.date}</li>`;
+                        });
+                        html += '</ul>';
+                        document.getElementById('backups').innerHTML = html;
+                    }
+                });
+        }
+        
+        function runCleanup() {
+            if (confirm('Run cleanup? This removes old data.')) {
+                fetch('../api/monitor.php?action=cleanup')
+                    .then(r => r.json())
+                    .then(data => {
+                        alert('Cleanup completed!');
+                        loadStats();
+                    });
+            }
+        }
+        
+        function createBackup() {
+            fetch('../api/backup.php?action=backup')
+                .then(r => r.json())
+                .then(data => {
+                    alert('Backup created: ' + data.file);
+                    loadBackups();
+                });
+        }
+        
+        function refreshAll() {
+            loadStats();
+            loadBackups();
+        }
+        
+        loadStats();
+        loadBackups();
+        setInterval(refreshAll, 300000); // Every 5 minutes
+    </script>
+</body>
+</html>

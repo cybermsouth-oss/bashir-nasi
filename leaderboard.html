@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wataalamu Bora | Bashiri Nasi</title>
+  <!-- NEW FEATURE MODULES (FEB 2025) -->
+<script src="assets/js/pwa-app.js"></script>
+<script src="assets/js/rating-system.js"></script>
+<script src="assets/js/leaderboard.js"></script>
+<script src="assets/js/multi-language.js"></script>
+<script src="assets/js/match-calendar.js"></script>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/new-features.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    .leaderboard-hero {
+      background: linear-gradient(135deg, #022C22, #064E3B);
+      padding: 60px 0;
+      text-align: center;
+      color: white;
+    }
+    .leaderboard-hero h1 {
+      font-size: 2.5rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #FBBF24, #FCD34D);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .leaderboard-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin: 24px 0;
+      flex-wrap: wrap;
+    }
+    .leaderboard-tab {
+      padding: 10px 24px;
+      border-radius: 30px;
+      border: 2px solid rgba(255,255,255,0.3);
+      background: transparent;
+      color: white;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+    .leaderboard-tab.active {
+      background: rgba(255,255,255,0.2);
+      border-color: #FBBF24;
+    }
+    .leaderboard-tab:hover {
+      background: rgba(255,255,255,0.1);
+    }
+    .leaderboard-list {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .leaderboard-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border: 1px solid var(--border-color);
+      transition: all 0.3s;
+    }
+    .leaderboard-card:hover {
+      transform: translateX(5px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .leaderboard-rank {
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+    .rank-1 { background: linear-gradient(135deg, #FBBF24, #FCD34D); color: white; font-size: 1.5rem; }
+    .rank-2 { background: linear-gradient(135deg, #C0C0C0, #A8A8A8); color: white; }
+    .rank-3 { background: linear-gradient(135deg, #CD7F32, #B8860B); color: white; }
+    .rank-other { background: var(--bg-primary); color: var(--text-primary); }
+    .leaderboard-info { flex: 1; }
+    .leaderboard-name { font-weight: 700; font-size: 1.1rem; }
+    .leaderboard-bio { font-size: 0.8rem; color: #6B7280; }
+    .leaderboard-stats {
+      display: flex;
+      gap: 16px;
+      text-align: center;
+    }
+    .leaderboard-stat {
+      font-size: 0.75rem;
+    }
+    .leaderboard-stat-value {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+    .leaderboard-stat-label {
+      color: #6B7280;
+      font-size: 0.65rem;
+    }
+    .leaderboard-medal {
+      font-size: 2rem;
+    }
+    @media (max-width: 600px) {
+      .leaderboard-card {
+        flex-direction: column;
+        text-align: center;
+      }
+      .leaderboard-stats {
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-grid">
+      <a class="brand" href="index.html">⚡ Bashiri Nasi</a>
+      <nav class="nav-links">
+        <a href="index.html" class="btn btn-outline btn-sm">Nyumbani</a>
+        <a href="login.html" class="btn btn-outline btn-sm">Ingia</a>
+        <a href="register.html" class="btn btn-primary btn-sm">Jisajili</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="leaderboard-hero">
+    <div class="container">
+      <h1>🏆 Wataalamu Bora</h1>
+      <p style="color:rgba(255,255,255,0.8);font-size:1.1rem;">Angalia tipsters wenye viwango vya juu vya ushindi</p>
+      
+      <div class="leaderboard-tabs">
+        <button class="leaderboard-tab active" onclick="Leaderboard.load('all')">Wote</button>
+        <button class="leaderboard-tab" onclick="Leaderboard.load('monthly')">Mwezi Huu</button>
+        <button class="leaderboard-tab" onclick="Leaderboard.load('weekly')">Wiki Hii</button>
+        <button class="leaderboard-tab" onclick="Leaderboard.load('winrate')">Kwa Win Rate</button>
+        <button class="leaderboard-tab" onclick="Leaderboard.load('revenue')">Kwa Mapato</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="container">
+    <div class="leaderboard-list" id="leaderboardList">
+      <div style="text-align:center;padding:40px;">
+        <i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#059669;"></i>
+        <p>Inapakia wataalamu...</p>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-content">
+        <span class="brand">⚡ Bashiri Nasi</span>
+        <div class="footer-links">
+          <a href="index.html">Nyumbani</a>
+          <a href="login.html">Ingia</a>
+          <a href="register.html">Jisajili</a>
+        </div>
+      </div>
+      <div class="footer-bottom"><p>© 2025 Bashiri Nasi. All rights reserved.</p></div>
+    </div>
+  </footer>
+
+  <div id="toastContainer"></div>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+  <script src="assets/js/leaderboard.js"></script>
+</body>
+</html>

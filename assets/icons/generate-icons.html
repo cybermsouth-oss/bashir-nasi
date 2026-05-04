@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate Icons</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; text-align: center; }
+        canvas { border: 1px solid #ccc; margin: 10px; }
+        .download-btn { 
+            display: inline-block; padding: 10px 20px; background: #059669; 
+            color: white; border: none; border-radius: 8px; cursor: pointer; 
+            margin: 5px; font-size: 14px; text-decoration: none;
+        }
+        .download-btn:hover { background: #047857; }
+    </style>
+</head>
+<body>
+    <h1>⚡ Bashiri Nasi - Icon Generator</h1>
+    <p>Click each button to download the icon. Save them in: <code>assets/icons/</code></p>
+    
+    <div id="icons"></div>
+    
+    <script>
+        function generateIcon(size) {
+            var canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            var ctx = canvas.getContext('2d');
+            
+            // Background gradient
+            var gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#059669');
+            gradient.addColorStop(1, '#047857');
+            ctx.fillStyle = gradient;
+            
+            // Rounded rectangle
+            var radius = size * 0.2;
+            ctx.beginPath();
+            ctx.moveTo(radius, 0);
+            ctx.lineTo(size - radius, 0);
+            ctx.quadraticCurveTo(size, 0, size, radius);
+            ctx.lineTo(size, size - radius);
+            ctx.quadraticCurveTo(size, size, size - radius, size);
+            ctx.lineTo(radius, size);
+            ctx.quadraticCurveTo(0, size, 0, size - radius);
+            ctx.lineTo(0, radius);
+            ctx.quadraticCurveTo(0, 0, radius, 0);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Text
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold ' + (size * 0.5) + 'px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('BN', size / 2, size / 2);
+            
+            // Border
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+            ctx.lineWidth = size * 0.03;
+            ctx.stroke();
+            
+            return canvas;
+        }
+        
+        var sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+        var container = document.getElementById('icons');
+        
+        sizes.forEach(function(size) {
+            var canvas = generateIcon(size);
+            container.appendChild(canvas);
+            
+            var br = document.createElement('br');
+            container.appendChild(br);
+            
+            var link = document.createElement('a');
+            link.href = canvas.toDataURL('image/png');
+            link.download = 'icon-' + size + 'x' + size + '.png';
+            link.className = 'download-btn';
+            link.textContent = '📥 Download ' + size + 'x' + size;
+            container.appendChild(link);
+            
+            var br2 = document.createElement('br');
+            container.appendChild(br2);
+        });
+        
+        document.write('<p style="margin-top:20px;color:#059669;">✅ Save all downloaded icons to: <strong>bashiri-nasi/assets/icons/</strong></p>');
+    </script>
+</body>
+</html>

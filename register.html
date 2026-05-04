@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register | Bashiri Nasi</title>
+  <link rel="stylesheet" href="assets/css/new-features.css" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <!-- 1. CryptoJS (CDN) - Required for SHA-256 and AES -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+
+<!-- 2. Main Application (EVERYTHING in one file) -->
+<script src="assets/js/main.js"></script>
+  <style>
+    .auth-wrapper { min-height: calc(100vh - 160px); display: flex; align-items: center; justify-content: center; padding: 40px 20px; background: linear-gradient(135deg, var(--bg-primary), var(--primary-soft)); }
+    .auth-container { max-width: 420px; width: 100%; }
+    .auth-card { background: var(--card-bg); border-radius: var(--radius-xl); box-shadow: var(--shadow-xl); overflow: hidden; }
+    .auth-header { background: linear-gradient(135deg, var(--secondary), var(--primary)); padding: 36px 28px; text-align: center; position: relative; }
+    .auth-header::after { content: ''; position: absolute; bottom: -16px; left: 0; right: 0; height: 16px; background: var(--card-bg); border-radius: 16px 16px 0 0; }
+    .auth-icon { width: 65px; height: 65px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 1.8rem; color: white; }
+    .auth-header h2 { color: white; font-size: 1.4rem; margin-bottom: 4px; }
+    .auth-header p { color: rgba(255,255,255,0.8); font-size: 0.85rem; margin: 0; }
+    .auth-body { padding: 30px 26px; }
+    .auth-footer { text-align: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color); font-size: 0.85rem; }
+    .auth-footer a { font-weight: 600; }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-grid">
+      <a class="brand" href="index.html">⚡ Bashiri Nasi</a>
+      <nav class="nav-links" id="navLinks">
+        <a href="index.html#tips" class="nav-link">Tips</a>
+        <a href="leaderboard.html" class="nav-link">Leaderboard</a>
+      </nav>
+      <div class="nav-buttons">
+        <a href="login.html" class="btn btn-outline btn-sm">Login</a>
+        <a href="register.html" class="btn btn-primary btn-sm">Register</a>
+      </div>
+    </div>
+  </header>
+
+  <div class="auth-wrapper">
+    <div class="auth-container">
+      <div class="auth-card">
+        <div class="auth-header">
+          <div class="auth-icon"><i class="fas fa-user-plus"></i></div>
+          <h2>Create Account</h2>
+          <p>Join the winning community</p>
+        </div>
+        <div class="auth-body">
+          <form id="registerForm">
+            <div class="form-group">
+              <label class="form-label">Full Name *</label>
+              <input type="text" class="form-input" id="fullName" placeholder="Enter your full name" required autocomplete="name" autofocus />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Phone Number *</label>
+              <input type="tel" class="form-input" id="phone" placeholder="255XXXXXXXXX" required autocomplete="tel" />
+              <span class="form-hint">Your phone number will be your username</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password *</label>
+              <input type="password" class="form-input" id="password" placeholder="Minimum 6 characters" required />
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg btn-block">
+              <i class="fas fa-user-plus"></i> Create Free Account
+            </button>
+          </form>
+          <div class="auth-footer">
+            <p>Already have an account? <a href="login.html">Sign In</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-content">
+        <span class="brand">⚡ Bashiri Nasi</span>
+        <div class="footer-links">
+          <a href="index.html">Home</a>
+          <a href="login.html">Login</a>
+        </div>
+      </div>
+      <div class="footer-bottom"><p>© 2025 Bashiri Nasi. All rights reserved.</p></div>
+    </div>
+  </footer>
+
+  <div id="toastContainer"></div>
+  <button class="dark-mode-toggle" id="darkModeToggle" onclick="toggleDarkMode()">
+    <i class="fas fa-moon"></i>
+  </button>
+  
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

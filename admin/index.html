@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Bashiri Nasi | Admin Control</title>
+  
+  <!-- Main styles (inherits platform design) -->
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <link rel="stylesheet" href="../assets/css/new-features.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  
+  <style>
+    /* ========== ENHANCED ADMIN STYLES – MATCHING MAIN GREEN THEME ========== */
+    :root {
+      --admin-gradient-start: #022C22;
+      --admin-gradient-end: #064E3B;
+    }
+
+    .admin-header {
+      background: linear-gradient(135deg, var(--admin-gradient-start), var(--admin-gradient-end));
+      padding: 28px 0;
+      margin-bottom: 32px;
+      border-radius: 0 0 28px 28px;
+      box-shadow: 0 12px 25px -8px rgba(0,0,0,0.15);
+      position: relative;
+      overflow: hidden;
+    }
+    .admin-header::before {
+      content: '';
+      position: absolute;
+      top: -30%;
+      right: -10%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(16,185,129,0.15) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .admin-header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 20px;
+      position: relative;
+      z-index: 1;
+    }
+    .admin-welcome {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .admin-avatar-lg {
+      width: 64px;
+      height: 64px;
+      background: rgba(255,255,255,0.12);
+      backdrop-filter: blur(4px);
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      color: #6EE7B7;
+      border: 1px solid rgba(255,255,255,0.2);
+      transition: 0.2s;
+    }
+    .admin-welcome-text h2 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: white;
+      margin: 0 0 6px;
+      letter-spacing: -0.3px;
+    }
+    .admin-welcome-text p {
+      color: rgba(255,255,255,0.75);
+      margin: 0;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .admin-quick-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .admin-quick-btn {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 10px 20px;
+      border-radius: 40px;
+      color: white;
+      font-weight: 600;
+      font-size: 0.85rem;
+      backdrop-filter: blur(8px);
+      transition: all 0.2s;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .admin-quick-btn:hover {
+      background: #059669;
+      border-color: #059669;
+      transform: translateY(-2px);
+    }
+
+    /* Stats grid – premium cards */
+    .admin-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 22px;
+      margin-bottom: 32px;
+    }
+    .admin-stat-card {
+      background: var(--card-bg);
+      border-radius: 24px;
+      padding: 22px 18px;
+      border: 1px solid var(--border-color);
+      transition: all 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+    .admin-stat-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 5px;
+      height: 100%;
+      background: linear-gradient(180deg, var(--primary), var(--secondary));
+    }
+    .admin-stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 30px -12px rgba(0,0,0,0.2);
+      border-color: var(--primary);
+    }
+    .admin-stat-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      margin-bottom: 16px;
+    }
+    .admin-stat-icon.users { background: rgba(59,130,246,0.12); color: #3B82F6; }
+    .admin-stat-icon.tipsters { background: rgba(16,185,129,0.12); color: #10B981; }
+    .admin-stat-icon.tips { background: rgba(245,158,11,0.12); color: #F59E0B; }
+    .admin-stat-icon.sales { background: rgba(139,92,246,0.12); color: #8B5CF6; }
+    .admin-stat-icon.revenue { background: rgba(5,150,105,0.12); color: #059669; }
+    .admin-stat-icon.pending { background: rgba(239,68,68,0.12); color: #EF4444; }
+    .admin-stat-value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1.2;
+      margin-bottom: 6px;
+    }
+    .admin-stat-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    /* Elegant cards */
+    .admin-content-card {
+      background: var(--card-bg);
+      border-radius: 24px;
+      border: 1px solid var(--border-color);
+      margin-bottom: 28px;
+      overflow: hidden;
+      transition: box-shadow 0.2s;
+    }
+    .admin-card-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      background: rgba(0,0,0,0.02);
+    }
+    .admin-card-header h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .admin-card-header h3 i { color: var(--primary); }
+    .admin-card-body { padding: 20px 24px; }
+
+    /* Tables aligned with platform */
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    .admin-table thead th {
+      background: var(--bg-primary);
+      padding: 14px 16px;
+      font-weight: 700;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      border-bottom: 2px solid var(--border-color);
+    }
+    .admin-table tbody td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-primary);
+      vertical-align: middle;
+    }
+    .admin-table tbody tr:hover {
+      background: var(--bg-primary);
+    }
+
+    /* Badges & status */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 30px;
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+    .status-active { background: rgba(16,185,129,0.12); color: #10B981; }
+    .status-inactive { background: rgba(239,68,68,0.12); color: #EF4444; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 30px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    .badge-primary { background: rgba(5,150,105,0.12); color: #059669; }
+    .badge-success { background: rgba(16,185,129,0.12); color: #10B981; }
+    .badge-warning { background: rgba(245,158,11,0.12); color: #F59E0B; }
+    .badge-info { background: rgba(59,130,246,0.12); color: #3B82F6; }
+
+    .action-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      background: rgba(239,68,68,0.08);
+      border: none;
+      color: #EF4444;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.9rem;
+    }
+    .action-btn:hover {
+      background: #EF4444;
+      color: white;
+      transform: scale(1.02);
+    }
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    .empty-state-icon {
+      font-size: 3rem;
+      opacity: 0.4;
+      margin-bottom: 16px;
+    }
+
+    /* Sidebar same green active */
+    .sidebar-item.active {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      font-weight: 600;
+    }
+    .sidebar-item.active i { color: white; }
+
+    /* Filter row */
+    .admin-filter-bar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .admin-search-input, .admin-filter-select {
+      padding: 10px 16px;
+      border-radius: 40px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-primary);
+      font-size: 0.8rem;
+      outline: none;
+    }
+    .admin-search-input:focus, .admin-filter-select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(5,150,105,0.1);
+    }
+    .btn-sm-outline {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      border-radius: 30px;
+      padding: 6px 14px;
+      font-size: 0.75rem;
+    }
+    @media (max-width: 768px) {
+      .admin-stats-grid { gap: 14px; }
+      .admin-card-header { flex-direction: column; align-items: stretch; }
+      .admin-table thead { display: none; }
+      .admin-table tr { display: block; margin-bottom: 16px; border: 1px solid var(--border-color); border-radius: 20px; padding: 12px; }
+      .admin-table td { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--border-color); }
+      .admin-table td::before { content: attr(data-label); font-weight: 700; color: var(--text-muted); font-size: 0.7rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-grid">
+    <a class="brand" href="../index.html">⚡ Bashiri Nasi Admin</a>
+    <nav class="nav-links">
+      <a href="../index.html" class="btn btn-outline btn-sm"><i class="fas fa-home"></i> Main Site</a>
+      <button class="btn btn-outline btn-sm" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    </nav>
+  </div>
+</header>
+
+<div class="admin-header">
+  <div class="container">
+    <div class="admin-header-content">
+      <div class="admin-welcome">
+        <div class="admin-avatar-lg"><i class="fas fa-shield-haltered"></i></div>
+        <div class="admin-welcome-text">
+          <h2 id="adminName">Administrator</h2>
+          <p><i class="fas fa-circle" style="color:#10B981; font-size: 0.5rem;"></i> Super Admin · Full Control</p>
+        </div>
+      </div>
+      <div class="admin-quick-actions">
+        <button class="admin-quick-btn" onclick="switchToTab('addtipster')"><i class="fas fa-user-plus"></i> Add Tipster</button>
+        <button class="admin-quick-btn" onclick="exportData()"><i class="fas fa-download"></i> Export Data</button>
+        <button class="admin-quick-btn" onclick="refreshAll()"><i class="fas fa-sync-alt"></i> Refresh</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<main>
+  <div class="container dashboard-layout">
+    <!-- SIDEBAR (green styled) -->
+    <div class="sidebar">
+      <div class="admin-profile">
+        <div class="admin-avatar"><i class="fas fa-shield-haltered"></i></div>
+        <div class="admin-info">
+          <h4 id="sidebarAdminName">Admin</h4>
+          <p>Platform Authority</p>
+          <span class="admin-badge"><i class="fas fa-star"></i> Super Admin</span>
+        </div>
+      </div>
+      <ul class="sidebar-menu">
+        <li class="sidebar-item active" data-admin-tab="overview"><i class="fas fa-chart-pie"></i> Overview</li>
+        <li class="sidebar-item" data-admin-tab="users"><i class="fas fa-users"></i> Users <span class="badge badge-primary" style="margin-left:auto;" id="usersCountBadge">0</span></li>
+        <li class="sidebar-item" data-admin-tab="tipsters"><i class="fas fa-user-tie"></i> Tipsters <span class="badge badge-info" style="margin-left:auto;" id="tipstersCountBadge">0</span></li>
+        <li class="sidebar-item" data-admin-tab="tips"><i class="fas fa-ticket-alt"></i> Bet Slips <span class="badge badge-warning" style="margin-left:auto;" id="tipsCountBadge">0</span></li>
+        <li class="sidebar-item" data-admin-tab="transactions"><i class="fas fa-chart-bar"></i> Transactions <span class="badge badge-success" style="margin-left:auto;" id="transactionsCountBadge">0</span></li>
+        <li class="sidebar-item" data-admin-tab="settings"><i class="fas fa-cog"></i> Settings</li>
+        <li class="sidebar-item" data-admin-tab="addtipster"><i class="fas fa-user-plus"></i> Add Tipster</li>
+      </ul>
+    </div>
+
+    <!-- MAIN CONTENT PANELS -->
+    <div class="main-content">
+      <!-- OVERVIEW -->
+      <div id="adminOverviewTab" class="admin-tab-content">
+        <div class="admin-stats-grid" id="adminStats"></div>
+        <div class="admin-content-card">
+          <div class="admin-card-header">
+            <h3><i class="fas fa-clock"></i> Recent Platform Activity</h3>
+            <button class="admin-quick-btn" style="background:transparent; color:var(--primary);" onclick="refreshAll()"><i class="fas fa-sync-alt"></i> Refresh</button>
+          </div>
+          <div class="admin-card-body" id="recentActivity">
+            <div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+          <div class="admin-content-card">
+            <div class="admin-card-header"><h3><i class="fas fa-chart-line"></i> Tips Performance</h3></div>
+            <div class="admin-card-body" id="tipsOverviewChart">
+              <div style="display:flex;justify-content:space-around;text-align:center;">
+                <div><div style="font-size:2rem;font-weight:800;color:#10B981;" id="wonTipsCount">0</div><div>Won</div></div>
+                <div><div style="font-size:2rem;font-weight:800;color:#EF4444;" id="lostTipsCount">0</div><div>Lost</div></div>
+                <div><div style="font-size:2rem;font-weight:800;color:#F59E0B;" id="pendingTipsCount">0</div><div>Pending</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="admin-content-card">
+            <div class="admin-card-header"><h3><i class="fas fa-money-bill-wave"></i> Revenue Snapshot</h3></div>
+            <div class="admin-card-body">
+              <div style="text-align:center;">
+                <div style="font-size:2.8rem;font-weight:800;background:linear-gradient(135deg,#059669,#10B981);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;" id="totalRevenueDisplay">TZS 0</div>
+                <div style="margin-top:6px;">from <strong id="totalSalesCount">0</strong> sales</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- USERS -->
+      <div id="adminUsersTab" class="admin-tab-content" style="display:none;">
+        <div class="admin-content-card">
+          <div class="admin-card-header">
+            <h3><i class="fas fa-users"></i> Registered Users</h3>
+            <div class="admin-filter-bar">
+              <input type="text" class="admin-search-input" placeholder="🔍 Search user..." id="usersSearch" oninput="filterUsers()">
+              <select id="usersFilter" class="admin-filter-select" onchange="filterUsers()">
+                <option value="all">All roles</option><option value="user">Bettors</option><option value="tipster">Tipsters</option><option value="admin">Admins</option>
+              </select>
+            </div>
+          </div>
+          <div class="admin-card-body"><div class="table-container"><table class="admin-table"><thead><tr><th>User</th><th>Phone</th><th>Role</th><th>Joined</th><th>Action</th></tr></thead><tbody id="usersTableBody"></tbody></table></div></div>
+        </div>
+      </div>
+
+      <!-- TIPSTERS -->
+      <div id="adminTipstersTab" class="admin-tab-content" style="display:none;">
+        <div class="admin-content-card">
+          <div class="admin-card-header"><h3><i class="fas fa-user-tie"></i> Expert Tipsters</h3><div class="admin-filter-bar"><input type="text" class="admin-search-input" id="tipstersSearch" placeholder="Search tipster..." oninput="filterTipsters()"><button class="admin-quick-btn" style="background:var(--primary);color:white;" onclick="switchToTab('addtipster')"><i class="fas fa-plus"></i> Add Tipster</button></div></div>
+          <div class="admin-card-body"><table class="admin-table"><thead><tr><th>Tipster</th><th>Phone</th><th>Bio</th><th>Tips</th><th>Win Rate</th><th></th></tr></thead><tbody id="tipstersTableBody"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- TIPS -->
+      <div id="adminTipsTab" class="admin-tab-content" style="display:none;">
+        <div class="admin-content-card">
+          <div class="admin-card-header"><h3><i class="fas fa-ticket-alt"></i> All Bet Slips</h3><div class="admin-filter-bar"><input type="text" id="tipsSearch" class="admin-search-input" placeholder="Code..."><select id="tipsFilter" class="admin-filter-select"><option value="all">All results</option><option value="won">Won</option><option value="lost">Lost</option><option value="pending">Pending</option></select><select id="tipsPlatformFilter" class="admin-filter-select"><option value="all">All platforms</option><option value="sportbet">Sportbet</option><option value="betpawa">Betpawa</option><option value="sportpesa">Sportpesa</option></select><button class="admin-quick-btn" onclick="filterTips()">Filter</button></div></div>
+          <div class="admin-card-body"><table class="admin-table"><thead><tr><th>Platform</th><th>Code</th><th>Odds</th><th>Price</th><th>Tipster</th><th>Result</th><th>Sold</th></tr></thead><tbody id="tipsTableBody"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- TRANSACTIONS -->
+      <div id="adminTransactionsTab" class="admin-tab-content" style="display:none;">
+        <div class="admin-content-card">
+          <div class="admin-card-header"><h3><i class="fas fa-chart-bar"></i> Payments & Purchases</h3><div class="admin-filter-bar"><input type="text" id="transactionsSearch" class="admin-search-input" placeholder="User..."><select id="transactionsFilter" class="admin-filter-select"><option value="all">All status</option><option value="paid">Paid</option></select></div></div>
+          <div class="admin-card-body"><table class="admin-table"><thead><tr><th>Date</th><th>User</th><th>Code</th><th>Amount</th><th>Status</th></tr></thead><tbody id="transactionsTableBody"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div id="adminSettingsTab" class="admin-tab-content" style="display:none;">
+        <div class="admin-content-card"><div class="admin-card-header"><h3><i class="fas fa-cog"></i> Platform Settings</h3></div><div class="admin-card-body">
+          <div style="background:var(--bg-primary);border-radius:20px;padding:24px;margin-bottom:20px;"><h4><i class="fas fa-lock"></i> Admin Password</h4><div style="display:grid;gap:12px;max-width:400px;"><input type="password" class="form-input" id="currentPassword" placeholder="Current password"><input type="password" class="form-input" id="newPassword" placeholder="New password"><input type="password" class="form-input" id="confirmPassword" placeholder="Confirm password"><button class="btn btn-primary" onclick="changeAdminPassword()">Update Password</button><div id="passwordMsg"></div></div></div>
+          <div style="background:var(--bg-primary);border-radius:20px;padding:24px;"><h4><i class="fas fa-database"></i> Data Management</h4><div style="display:flex;gap:12px;flex-wrap:wrap;"><button class="btn btn-outline" onclick="exportData()"><i class="fas fa-download"></i> Export Data</button><button class="btn btn-outline" onclick="backupData()"><i class="fas fa-save"></i> Backup Now</button><button class="btn btn-danger" onclick="clearAllData()"><i class="fas fa-trash"></i> Clear All Data</button></div><div class="info-text" style="margin-top:16px;"><strong>Storage used:</strong> <span id="storageUsed">-</span> | <strong>Last backup:</strong> <span id="lastBackup">Never</span></div></div>
+        </div></div>
+      </div>
+
+      <!-- ADD TIPSTER -->
+      <div id="adminAddtipsterTab" class="admin-tab-content" style="display:none;">
+        <div class="admin-content-card"><div class="admin-card-header"><h3><i class="fas fa-user-plus"></i> Create New Tipster</h3></div><div class="admin-card-body"><form id="addTipsterForm" style="max-width:500px;"><div class="form-group"><label>Full Name *</label><input type="text" class="form-input" id="tipsterNameInput" required></div><div class="form-group"><label>Phone Number *</label><input type="tel" class="form-input" id="tipsterPhoneInput" placeholder="255XXXXXXXXX" required></div><div class="form-group"><label>Password *</label><input type="password" class="form-input" id="tipsterPasswordInput" required></div><div class="form-group"><label>Bio</label><input type="text" class="form-input" id="tipsterBioInput" placeholder="Expert tipster..."></div><button type="submit" class="btn btn-primary btn-lg btn-block">Create Tipster Account</button><div id="successMsg" class="success-message" style="display:none;"></div><div id="errorMsg" class="error-message" style="display:none;"></div></form></div></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer"><div class="container"><div class="footer-content"><span class="brand">⚡ Bashiri Nasi Admin</span><div class="footer-links"><a href="../index.html">Main Site</a></div></div><div class="footer-bottom"><p>© 2025 Bashiri Nasi — Premium Predictions Platform. Secure & Trusted.</p></div></div></footer>
+<div id="toastContainer"></div>
+<button class="dark-mode-toggle" id="darkModeToggle" onclick="toggleDarkMode()"><i class="fas fa-moon"></i></button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+<script src="../assets/js/main.js"></script>
+<script>
+  // ADMIN PANEL — COMPLETE & REFINED. NO PLACEHOLDER CONFUSION.
+  document.addEventListener('DOMContentLoaded', function() { checkAdminAccess(); initAdminPanel(); });
+  function checkAdminAccess() { let session = localStorage.getItem('bashiri_session'); if (!session) { window.location.href = '../login.html'; return; } let user = JSON.parse(session); if (user.role !== 'admin') { window.location.href = '../login.html'; } document.querySelectorAll('#adminName, #sidebarAdminName').forEach(el => el.textContent = user.name || 'Administrator'); }
+  function initAdminPanel() { setupSidebar(); setupAddTipster(); loadAllData(); calculateStorage(); }
+  function setupSidebar() { document.querySelectorAll('[data-admin-tab]').forEach(el => el.addEventListener('click', function() { let tab = this.getAttribute('data-admin-tab'); switchToTab(tab); })); }
+  function switchToTab(tab) { document.querySelectorAll('[data-admin-tab]').forEach(i => i.classList.remove('active')); let active = document.querySelector(`[data-admin-tab="${tab}"]`); if(active) active.classList.add('active'); document.querySelectorAll('.admin-tab-content').forEach(c => c.style.display = 'none'); let target = document.getElementById(`admin${tab.charAt(0).toUpperCase() + tab.slice(1)}Tab`); if(target) target.style.display = 'block'; if(tab === 'overview') { loadOverview(); loadRecentActivity(); } if(tab === 'users') loadUsersTable(); if(tab === 'tipsters') loadTipstersTable(); if(tab === 'tips') loadTipsTable(); if(tab === 'transactions') loadTransactionsTable(); }
+  function refreshAll() { loadAllData(); if(window.toast) toast('Dashboard refreshed', 'success'); }
+  function DB(key) { let data = localStorage.getItem(`bashiri_${key}`); return data ? JSON.parse(data) : []; }
+  function saveDB(key, data) { localStorage.setItem(`bashiri_${key}`, JSON.stringify(data)); }
+  function fmt(amount) { return 'TZS ' + amount.toLocaleString(); }
+  function fdate(d) { if(!d) return '-'; let date = new Date(d); return date.toLocaleDateString('en-GB'); }
+  function escapeHTML(str) { if(!str) return ''; return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+  function hashPassword(pwd) { return CryptoJS.SHA256(pwd).toString(); }
+  function verifyPassword(plain, hash) { return CryptoJS.SHA256(plain).toString() === hash; }
+  function loadAllData() { loadOverview(); updateSidebarBadges(); loadRecentActivity(); }
+  function loadOverview() { let users = DB('users'), tips = DB('tips'), purchases = DB('purchases').filter(p => p.status === 'paid'); let totalUsers = users.filter(u => u.role === 'user').length, tipsters = users.filter(u => u.role === 'tipster').length, totalRevenue = purchases.reduce((s,p) => s + (p.amount||0),0); let won = tips.filter(t => t.result === 'won').length, lost = tips.filter(t => t.result === 'lost').length, pending = tips.filter(t => t.result === 'pending').length; document.getElementById('adminStats').innerHTML = `<div class="admin-stat-card"><div class="admin-stat-icon users"><i class="fas fa-users"></i></div><div class="admin-stat-value">${totalUsers}</div><div class="admin-stat-label">Bettors</div></div><div class="admin-stat-card"><div class="admin-stat-icon tipsters"><i class="fas fa-user-tie"></i></div><div class="admin-stat-value">${tipsters}</div><div class="admin-stat-label">Tipsters</div></div><div class="admin-stat-card"><div class="admin-stat-icon tips"><i class="fas fa-ticket-alt"></i></div><div class="admin-stat-value">${tips.length}</div><div class="admin-stat-label">Total Tips</div></div><div class="admin-stat-card"><div class="admin-stat-icon sales"><i class="fas fa-shopping-cart"></i></div><div class="admin-stat-value">${purchases.length}</div><div class="admin-stat-label">Sales</div></div><div class="admin-stat-card"><div class="admin-stat-icon revenue"><i class="fas fa-money-bill-wave"></i></div><div class="admin-stat-value">${fmt(totalRevenue)}</div><div class="admin-stat-label">Revenue</div></div><div class="admin-stat-card"><div class="admin-stat-icon pending"><i class="fas fa-clock"></i></div><div class="admin-stat-value">${pending}</div><div class="admin-stat-label">Pending</div></div>`; document.getElementById('wonTipsCount').innerText = won; document.getElementById('lostTipsCount').innerText = lost; document.getElementById('pendingTipsCount').innerText = pending; document.getElementById('totalRevenueDisplay').innerText = fmt(totalRevenue); document.getElementById('totalSalesCount').innerText = purchases.length; updateSidebarBadges(); }
+  function updateSidebarBadges() { let users = DB('users'); let tips = DB('tips'); let purchases = DB('purchases').filter(p => p.status === 'paid'); let userCount = users.filter(u => u.role === 'user').length; let tipCount = users.filter(u => u.role === 'tipster').length; if(document.getElementById('usersCountBadge')) document.getElementById('usersCountBadge').innerText = userCount; if(document.getElementById('tipstersCountBadge')) document.getElementById('tipstersCountBadge').innerText = tipCount; if(document.getElementById('tipsCountBadge')) document.getElementById('tipsCountBadge').innerText = tips.length; if(document.getElementById('transactionsCountBadge')) document.getElementById('transactionsCountBadge').innerText = purchases.length; }
+  function loadRecentActivity() { let acts = []; let users = DB('users'); tips = DB('tips'); purchases = DB('purchases'); users.forEach(u => { if(u.createdAt) acts.push({ icon:'👤', text:`${escapeHTML(u.name)} joined (${u.role})`, time:u.createdAt }); }); tips.forEach(t => { acts.push({ icon:'📋', text:`New tip ${escapeHTML(t.code)} from ${escapeHTML(t.tipsterName||'tipster')}`, time:t.createdAt }); if(t.result !== 'pending' && t.updatedAt) acts.push({ icon: t.result === 'won' ? '🏆' : '❌', text:`Tip ${escapeHTML(t.code)} ${t.result === 'won' ? 'won' : 'lost'}`, time:t.updatedAt }); }); purchases.forEach(p => { let user = users.find(u => u.id === p.userId); acts.push({ icon:'💰', text:`${escapeHTML(user?.name || 'User')} purchased tip`, time:p.paidAt||p.createdAt }); }); acts.sort((a,b)=>new Date(b.time)-new Date(a.time)); let html = acts.slice(0,12).map(a => `<div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-color);"><span style="font-size:1.4rem;">${a.icon}</span><div><div style="font-weight:500;">${a.text}</div><div style="font-size:0.7rem;color:var(--text-muted);">${new Date(a.time).toLocaleString()}</div></div></div>`).join(''); document.getElementById('recentActivity').innerHTML = html || '<div class="empty-state">No activity yet</div>'; }
+  function loadUsersTable() { let users = DB('users'); let tbody = document.getElementById('usersTableBody'); if(!tbody) return; tbody.innerHTML = users.map(u => `<tr><td data-label="User"><strong>${escapeHTML(u.name)}</strong></td><td data-label="Phone">${escapeHTML(u.phone)}</td><td data-label="Role"><span class="badge ${u.role==='admin'?'badge-danger':u.role==='tipster'?'badge-info':'badge-primary'}">${u.role}</span></td><td data-label="Joined">${fdate(u.createdAt)}</td><td data-label="Action">${u.role !== 'admin' ? `<button class="action-btn" onclick="removeUser('${u.id}')"><i class="fas fa-trash"></i></button>` : '-'}</td></tr>`).join(''); if(!users.length) tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">No users</div></td></tr>'; }
+  function filterUsers() { let search = document.getElementById('usersSearch').value.toLowerCase(); let role = document.getElementById('usersFilter').value; let filtered = DB('users').filter(u => (!search || u.name?.toLowerCase().includes(search) || u.phone.includes(search)) && (role === 'all' || u.role === role)); document.getElementById('usersTableBody').innerHTML = filtered.map(u => `<tr><td>${escapeHTML(u.name)}</td><td>${escapeHTML(u.phone)}</td><td>${u.role}</td><td>${fdate(u.createdAt)}</td><td>${u.role !== 'admin' ? `<button class="action-btn" onclick="removeUser('${u.id}')"><i class="fas fa-trash"></i></button>` : '-'}</td></tr>`).join('') || '<tr><td colspan="5"><div class="empty-state">No matches</div></td></tr>'; }
+  function loadTipstersTable() { let tipsters = DB('users').filter(u => u.role === 'tipster'); let tips = DB('tips'); let tbody = document.getElementById('tipstersTableBody'); tbody.innerHTML = tipsters.map(t => { let tipCount = tips.filter(tp => tp.tipsterId === t.id).length; let won = tips.filter(tp => tp.tipsterId === t.id && tp.result === 'won').length; let wr = tipCount ? Math.round((won/tipCount)*100) : 0; return `<tr><td><strong>${escapeHTML(t.name)}</strong></td><td>${escapeHTML(t.phone)}</td><td>${escapeHTML(t.bio?.substring(0,30)||'Pro tipster')}</td><td>${tipCount}</td><td><span class="badge ${wr>=50?'badge-success':'badge-warning'}">${wr}%</span></td><td><button class="action-btn" onclick="removeUser('${t.id}')"><i class="fas fa-trash"></i></button></td></tr>`; }).join(''); if(!tipsters.length) tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">No tipsters</div></td></tr>'; }
+  function filterTipsters() { let s = document.getElementById('tipstersSearch').value.toLowerCase(); let tipsters = DB('users').filter(u => u.role === 'tipster' && (!s || u.name?.toLowerCase().includes(s))); let tips = DB('tips'); document.getElementById('tipstersTableBody').innerHTML = tipsters.map(t => `<tr><td>${escapeHTML(t.name)}</td><td>${t.phone}</td><td>${t.bio||'-'}</td><td>${tips.filter(tp=>tp.tipsterId===t.id).length}</td><td>-</td><td><button class="action-btn" onclick="removeUser('${t.id}')"><i class="fas fa-trash"></i></button></td></tr>`).join(''); }
+  function loadTipsTable() { let tips = DB('tips'); let tbody = document.getElementById('tipsTableBody'); tbody.innerHTML = tips.map(t => `<tr><td>${(t.platform||'').toUpperCase()}</td><td><code>${escapeHTML(t.code)}</code></td><td>${t.odds}</td><td>${fmt(t.price)}</td><td>${escapeHTML(t.tipsterName||'')}</td><td><span class="badge ${t.result==='won'?'badge-success':t.result==='lost'?'badge-danger':'badge-warning'}">${t.result||'pending'}</span></td><td>${t.purchased||0}</td></tr>`).reverse(); if(!tips.length) tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">No tips</div></td></tr>'; }
+  function filterTips() { let search = document.getElementById('tipsSearch').value.toLowerCase(); let result = document.getElementById('tipsFilter').value; let platform = document.getElementById('tipsPlatformFilter').value; let tips = DB('tips').filter(t => (!search || t.code.toLowerCase().includes(search)) && (result === 'all' || t.result === result) && (platform === 'all' || t.platform === platform)); document.getElementById('tipsTableBody').innerHTML = tips.map(t => `<tr><td>${t.platform}</td><td>${t.code}</td><td>${t.odds}</td><td>${fmt(t.price)}</td><td>${t.tipsterName}</td><td><span class="badge badge-${t.result}">${t.result}</span></td><td>${t.purchased||0}</td></tr>`).join(''); }
+  function loadTransactionsTable() { let purchases = DB('purchases'); let users = DB('users'); let tbody = document.getElementById('transactionsTableBody'); tbody.innerHTML = purchases.map(p => { let user = users.find(u => u.id === p.userId); return `<tr><td>${fdate(p.paidAt||p.createdAt)}</td><td>${escapeHTML(user?.name||'Unknown')}</td><td>${p.tipCode||'-'}</td><td>${fmt(p.amount)}</td><td><span class="badge badge-success">paid</span></td></tr>`; }).reverse(); if(!purchases.length) tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">No transactions</div></td></tr>'; }
+  function filterTransactions() { let s = document.getElementById('transactionsSearch').value.toLowerCase(); let filter = document.getElementById('transactionsFilter').value; let purchases = DB('purchases'); let users = DB('users'); let filtered = purchases.filter(p => { let u = users.find(u=>u.id===p.userId); let matchUser = !s || (u?.name||'').toLowerCase().includes(s); return matchUser && (filter==='all' || p.status===filter); }); document.getElementById('transactionsTableBody').innerHTML = filtered.map(p => `<tr><td>${fdate(p.createdAt)}</td><td>${escapeHTML(users.find(u=>u.id===p.userId)?.name||'')}</td><td>-</td><td>${fmt(p.amount)}</td><td><span class="badge badge-success">paid</span></td></tr>`).join(''); }
+  function changeAdminPassword() { let cur = document.getElementById('currentPassword').value, np = document.getElementById('newPassword').value, cp = document.getElementById('confirmPassword').value, msgDiv = document.getElementById('passwordMsg'); if(!cur||!np||!cp) { msgDiv.innerHTML='<span style="color:#EF4444;">All fields required</span>'; return; } if(np !== cp) { msgDiv.innerHTML='<span style="color:#EF4444;">Passwords mismatch</span>'; return; } let session = JSON.parse(localStorage.getItem('bashiri_session')); let users = DB('users'); let idx = users.findIndex(u => u.id === session.id); if(idx !== -1 && verifyPassword(cur, users[idx].password)) { users[idx].password = hashPassword(np); saveDB('users', users); msgDiv.innerHTML='<span style="color:#10B981;">✅ Password updated</span>'; document.getElementById('currentPassword').value=''; document.getElementById('newPassword').value=''; document.getElementById('confirmPassword').value=''; } else { msgDiv.innerHTML='<span style="color:#EF4444;">Current password incorrect</span>'; } }
+  function exportData() { let data = { users:DB('users'), tips:DB('tips'), purchases:DB('purchases'), follows:DB('follows'), exported:new Date() }; let a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})); a.download = `bashiri_backup_${new Date().toISOString().slice(0,19)}.json`; a.click(); if(window.toast) toast('Export complete', 'success'); }
+  function backupData() { let backup = { users:DB('users'), tips:DB('tips'), purchases:DB('purchases'), follows:DB('follows'), backupAt:new Date() }; localStorage.setItem('bashiri_full_backup', JSON.stringify(backup)); localStorage.setItem('bashiri_last_backup', new Date().toISOString()); document.getElementById('lastBackup').innerText = new Date().toLocaleString(); if(window.toast) toast('Backup saved', 'success'); }
+  function clearAllData() { if(confirm('⚠️ Wipe all data permanently?')) { localStorage.clear(); sessionStorage.clear(); window.location.reload(); } }
+  function calculateStorage() { let total = 0; for(let i=0;i<localStorage.length;i++) if(localStorage.key(i).startsWith('bashiri_')) total += localStorage.getItem(localStorage.key(i)).length; document.getElementById('storageUsed').innerText = (total/1024).toFixed(2)+' KB'; let lb = localStorage.getItem('bashiri_last_backup'); if(document.getElementById('lastBackup')) document.getElementById('lastBackup').innerText = lb ? new Date(lb).toLocaleString() : 'Never'; }
+  function setupAddTipster() { document.getElementById('addTipsterForm')?.addEventListener('submit', function(e) { e.preventDefault(); let name = document.getElementById('tipsterNameInput').value.trim(), phone = document.getElementById('tipsterPhoneInput').value.trim(), pwd = document.getElementById('tipsterPasswordInput').value, bio = document.getElementById('tipsterBioInput').value.trim() || 'Professional Tipster'; if(!name||!phone||!pwd) { showMsg('error','Fill all fields'); return; } if(pwd.length<6) { showMsg('error','Password 6+ chars'); return; } let users = DB('users'); if(users.some(u=>u.phone===phone)) { showMsg('error','Phone already used'); return; } users.push({ id:'tipster_'+Date.now(), name, phone, password:hashPassword(pwd), role:'tipster', bio, createdAt:new Date().toISOString(), isActive:true }); saveDB('users', users); showMsg('success',`✅ Tipster ${name} created! Login: ${phone}`); document.getElementById('addTipsterForm').reset(); loadAllData(); }); }
+  function showMsg(type, msg) { let suc = document.getElementById('successMsg'), err = document.getElementById('errorMsg'); if(type==='success') { if(suc) { suc.style.display='block'; suc.innerHTML='<i class="fas fa-check-circle"></i> '+msg; setTimeout(()=>suc.style.display='none',4000); } if(err) err.style.display='none'; } else { if(err) { err.style.display='block'; err.innerHTML='<i class="fas fa-exclamation-circle"></i> '+msg; setTimeout(()=>err.style.display='none',4000); } if(suc) suc.style.display='none'; } }
+  function removeUser(id) { if(confirm('Delete permanently?')) { let users = DB('users').filter(u => u.id !== id); saveDB('users', users); let tips = DB('tips').filter(t => t.tipsterId !== id); saveDB('tips', tips); loadAllData(); if(window.toast) toast('User removed', 'info'); switchToTab('users'); } }
+  function doLogout() { localStorage.removeItem('bashiri_session'); window.location.href = '../index.html'; }
+  window.switchToTab = switchToTab; window.refreshAll = refreshAll; window.exportData = exportData; window.backupData = backupData; window.clearAllData = clearAllData; window.filterUsers = filterUsers; window.filterTipsters = filterTipsters; window.filterTips = filterTips; window.filterTransactions = filterTransactions; window.changeAdminPassword = changeAdminPassword; window.removeUser = removeUser; window.doLogout = doLogout;
+</script>
+</body>
+</html>

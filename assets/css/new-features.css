@@ -1,0 +1,103 @@
+/* ============================================ */
+/* NEW FEATURES - ADDITIONAL STYLES */
+/* ============================================ */
+
+/* Screenshot Upload */
+.screenshot-upload-area {
+    transition: all 0.3s ease;
+}
+
+.screenshot-upload-area:hover {
+    border-color: #059669 !important;
+    background: #F0FDF4 !important;
+}
+
+.tip-screenshot {
+    border-top: 1px solid #E5E7EB;
+    padding-top: 12px;
+}
+
+.tip-screenshot img {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.3s;
+}
+
+.tip-screenshot img:hover {
+    transform: scale(1.02);
+}
+
+/* Dark Mode Toggle Enhancement */
+.dark-mode-toggle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 14px;
+    font-size: 0.8rem;
+}
+
+/* Export Buttons */
+.export-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 12px 0;
+}
+
+/* SMS Log */
+.sms-log {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.sms-log-item {
+    padding: 8px 12px;
+    border-left: 3px solid #059669;
+    margin-bottom: 4px;
+    background: #F9FAFB;
+    border-radius: 0 6px 6px 0;
+    font-size: 0.8rem;
+}
+
+/* Notification Permission Button */
+.notification-permission-btn {
+    background: linear-gradient(135deg, #059669, #10B981);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.8rem;
+    transition: all 0.3s;
+}
+
+.notification-permission-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(5,150,105,0.3);
+}
+
+/* Animation for new features */
+@keyframes slideInRight {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.new-feature-badge {
+    animation: slideInRight 0.5s ease-out;
+}
+
+/* Print styles */
+@media print {
+    .no-print, .dark-mode-toggle, .site-header, .sidebar, .admin-quick-actions {
+        display: none !important;
+    }
+    
+    body {
+        background: white !important;
+        color: black !important;
+    }
+    
+    .main-content {
+        width: 100% !important;
+    }
+}

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bashiri Nasi | #1 Football Predictions Tanzania</title>
+  <meta name="description" content="Get winning bet codes from expert tipsters. Trusted by thousands of Tanzanian bettors.">
+  <!-- Styles -->
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/new-features.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+<!-- Header -->
+<header class="site-header">
+  <div class="container header-grid">
+    <a class="brand" href="index.html">⚡ Bashiri Nasi</a>
+    <nav class="nav-links" id="navLinks">
+      <a href="#tips" class="nav-link">Tips</a>
+      <a href="leaderboard.html" class="nav-link">Leaderboard</a>
+    </nav>
+    <div class="nav-buttons">
+      <a href="login.html" class="btn btn-outline btn-sm">Login</a>
+      <a href="register.html" class="btn btn-primary btn-sm">Register</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-content">
+        <span class="hero-badge">⭐ #1 Trusted Platform in Tanzania</span>
+        <h1>Winning bet codes from <span class="hero-highlight">expert tipsters.</span></h1>
+        <p>Bashiri Nasi connects you to Tanzania's most trusted football predictors. Buy verified bet slips, follow proven winners, and bet smarter every weekend.</p>
+        <div class="hero-buttons">
+          <a href="register.html" class="btn btn-primary btn-lg">Get Started Free</a>
+          <a href="leaderboard.html" class="btn btn-outline btn-lg">View Leaderboard</a>
+        </div>
+        <div class="hero-stats">
+          <div class="hero-stat"><div class="hero-stat-number">50+</div><div class="hero-stat-label">ACTIVE TIPSTERS</div></div>
+          <div class="hero-stat"><div class="hero-stat-number">2,400+</div><div class="hero-stat-label">VERIFIED WINS</div></div>
+          <div class="hero-stat"><div class="hero-stat-number">15K+</div><div class="hero-stat-label">HAPPY BETTORS</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features-section">
+    <div class="container">
+      <div class="section-header-center">
+        <h2>Built for serious bettors</h2>
+        <p>Everything you need to find winners and bet with confidence.</p>
+      </div>
+      <div class="features-grid-4">
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fas fa-trophy"></i></div>
+          <h3>Expert Tipsters</h3>
+          <p>Vetted predictors with proven track records and verified win rates.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fas fa-shield-alt"></i></div>
+          <h3>Secure Wallet</h3>
+          <p>Top up, buy bet codes and withdraw earnings — fully protected.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fas fa-chart-line"></i></div>
+          <h3>Live Leaderboard</h3>
+          <p>See who's hot right now. Pick tips from this week's top performers.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fas fa-zap"></i></div>
+          <h3>Instant Codes</h3>
+          <p>Bet codes delivered the moment your purchase is confirmed.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="cta-section">
+    <div class="container">
+      <div class="cta-content">
+        <div class="cta-icon"><i class="fas fa-users"></i></div>
+        <h2>Ready to start winning?</h2>
+        <p>Join thousands of Tanzanian bettors who trust Bashiri Nasi every weekend.</p>
+        <a href="register.html" class="btn btn-primary btn-lg">Create Free Account</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Footer -->
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-content">
+      <div><span class="brand">⚡ Bashiri Nasi</span><p style="font-size:0.7rem;">#1 Trusted Predictions Platform</p></div>
+      <div class="footer-links"><a href="index.html">Home</a><a href="login.html">Login</a><a href="register.html">Register</a><a href="#">Privacy</a><a href="#">Terms</a></div>
+    </div>
+    <div class="footer-bottom"><p>© 2025 Bashiri Nasi. Bet Responsibly. 18+</p></div>
+  </div>
+</footer>
+
+<div id="toastContainer"></div>
+<button class="dark-mode-toggle" id="darkModeToggle" onclick="toggleDarkMode()"><i class="fas fa-moon"></i></button>
+
+<script>
+  function toggleDarkMode() {
+    const html = document.documentElement;
+    const current = html.getAttribute('data-theme');
+    if (current === 'dark') {
+      html.removeAttribute('data-theme');
+      localStorage.removeItem('bashiri_theme');
+    } else {
+      html.setAttribute('data-theme', 'dark');
+      localStorage.setItem('bashiri_theme', 'dark');
+    }
+  }
+  // Check localStorage for user preference
+  if (localStorage.getItem('bashiri_theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+</script>
+</body>
+</html>
