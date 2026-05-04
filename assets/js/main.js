@@ -1,5 +1,8 @@
 // ============================================
-// BASHIRI NASI - SECURE APPLICATION v4.1.0
+// BASHIRI NASI - COMPLETE APPLICATION v5.0.0
+// LOCAL STORAGE MODE - Works on GitHub Pages
+// No Server Required | Full Authentication
+// ============================================
 
 'use strict';
 
@@ -7,13 +10,11 @@
 // AUTHENTICATION GUARD - MUST BE FIRST
 // ============================================
 (function() {
-    // IMMEDIATELY check authentication before any content loads
     var path = window.location.pathname;
     var isAdminPath = path.indexOf('/admin') !== -1;
     var isLoginPage = path.indexOf('login.html') !== -1 || path.indexOf('/login') !== -1;
     var isRegisterPage = path.indexOf('register.html') !== -1 || path.indexOf('/register') !== -1;
     
-    // Check session immediately
     var session = null;
     try {
         var sessionData = localStorage.getItem('bashiri_session');
@@ -24,27 +25,24 @@
         session = null;
     }
     
-    // If accessing admin page without valid session, redirect IMMEDIATELY
     if (isAdminPath) {
         if (!session || !session.id || !session.role) {
-            window.location.replace('login.html?redirect=admin&error=Please login first');
-            return; // Stop execution
+            window.location.replace('../login.html?redirect=admin&error=Please login first');
+            return;
         }
         
         if (session.role !== 'admin') {
             window.location.replace('../index.html?error=Access denied');
-            return; // Stop execution
+            return;
         }
         
-        // Check session expiry
         if (session.expiresAt && Date.now() > session.expiresAt) {
             localStorage.removeItem('bashiri_session');
             window.location.replace('../login.html?redirect=admin&error=Session expired');
-            return; // Stop execution
+            return;
         }
     }
     
-    // If logged in but on login/register page, redirect to home
     if ((isLoginPage || isRegisterPage) && session && session.id) {
         if (!session.expiresAt || Date.now() < session.expiresAt) {
             if (session.role === 'admin') {
@@ -58,33 +56,385 @@
 })();
 
 // ============================================
-// SECURE CONFIGURATION
+// CONFIGURATION
 // ============================================
 var CONFIG = {
-    API_BASE_URL: 'https://cybermsouth-oss.github.io/bashir-nasi/',
-    SESSION_TIMEOUT: 30 * 60 * 1000, // 30 minutes
+    API_BASE_URL: '',
+    USE_LOCAL_STORAGE: true,
+    SESSION_TIMEOUT: 30 * 60 * 1000,
     MAX_LOGIN_ATTEMPTS: 5,
-    LOGIN_LOCKOUT_TIME: 60 * 60 * 1000,
-    MIN_PASSWORD_LENGTH: 8,
+    MIN_PASSWORD_LENGTH: 6,
     API_TIMEOUT: 15000,
-    TOKEN_REFRESH_INTERVAL: 5 * 60 * 1000,
-    RATE_LIMIT_DELAY: 1000
+    RATE_LIMIT_DELAY: 500,
+    INPUT_MAX_LENGTH: 200
 };
+
+// ============================================
+// LOCAL DATABASE
+// ============================================
+function getLocalDB() {
+    var db = localStorage.getItem('bashiri_db');
+    if (!db) {
+        // Initialize with admin account
+        var defaultDB = {
+            users: [
+                {
+                    id: 'admin_001',
+                    name: 'Administrator',
+                    phone: '255712345678',
+                    email: 'admin@bashiri.com',
+                    password: 'Admin@123',
+                    role: 'admin',
+                    bio: 'System Administrator',
+                    is_active: true,
+                    token: '',
+                    createdAt: new Date().toISOString()
+                }
+            ],
+            tips: [],
+            purchases: [],
+            follows: []
+        };
+        localStorage.setItem('bashiri_db', JSON.stringify(defaultDB));
+        return defaultDB;
+    }
+    try {
+        return JSON.parse(db);
+    } catch(e) {
+        return { users: [], tips: [], purchases: [], follows: [] };
+    }
+}
+
+function saveLocalDB(db) {
+    localStorage.setItem('bashiri_db', JSON.stringify(db));
+}
+
+// ============================================
+// API CALLER (LOCAL STORAGE MODE)
+// ============================================
+function apiCall(endpoint, method, data) {
+    return new Promise(function(resolve, reject) {
+        setTimeout(function() {
+            try {
+                var db = getLocalDB();
+                var response = null;
+                
+                // ============ LOGIN ============
+                if (endpoint.includes('auth.php?action=login') && method === 'POST') {
+                    var user = db.users.find(function(u) {
+                        var phoneMatch = data.phone && u.phone === data.phone;
+                        var emailMatch = data.email && u.email && u.email.toLowerCase() === data.email.toLowerCase();
+                        return (phoneMatch || emailMatch) && u.password === data.password;
+                    });
+                    
+                    if (user) {
+                        var token = 'tok_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                        user.token = token;
+                        user.lastLogin = new Date().toISOString();
+                        saveLocalDB(db);
+                        
+                        response = {
+                            success: true,
+                            message: 'Login successful',
+                            user: {
+                                id: user.id,
+                                name: user.name,
+                                phone: user.phone,
+                                email: user.email || '',
+                                role: user.role,
+                                bio: user.bio || '',
+                                token: token
+                            }
+                        };
+                    } else {
+                        response = { 
+                            success: false, 
+                            message: 'Invalid credentials. Please check your phone/email and password.' 
+                        };
+                    }
+                }
+                
+                // ============ REGISTER ============
+                else if (endpoint.includes('auth.php?action=register') && method === 'POST') {
+                    var exists = db.users.find(function(u) {
+                        return u.phone === data.phone || (data.email && u.email === data.email);
+                    });
+                    
+                    if (exists) {
+                        response = { 
+                            success: false, 
+                            message: 'Phone number or email already registered.' 
+                        };
+                    } else {
+                        var newUser = {
+                            id: 'usr_' + Date.now(),
+                            name: data.name,
+                            phone: data.phone,
+                            email: data.email || '',
+                            password: data.password,
+                            role: 'user',
+                            bio: '',
+                            is_active: true,
+                            token: '',
+                            createdAt: new Date().toISOString()
+                        };
+                        db.users.push(newUser);
+                        saveLocalDB(db);
+                        
+                        response = {
+                            success: true,
+                            message: 'Registration successful! You can now login.'
+                        };
+                    }
+                }
+                
+                // ============ LOGOUT ============
+                else if (endpoint.includes('auth.php?action=logout') && method === 'POST') {
+                    if (data && data.user_id) {
+                        var logoutUser = db.users.find(function(u) { return u.id === data.user_id; });
+                        if (logoutUser) logoutUser.token = '';
+                        saveLocalDB(db);
+                    }
+                    response = { success: true, message: 'Logged out' };
+                }
+                
+                // ============ GET USERS ============
+                else if (endpoint.includes('users.php') && method === 'GET') {
+                    var roleFilter = '';
+                    if (endpoint.includes('role=')) {
+                        roleFilter = endpoint.split('role=')[1];
+                        if (roleFilter.includes('&')) roleFilter = roleFilter.split('&')[0];
+                    }
+                    
+                    var users = db.users.filter(function(u) {
+                        return roleFilter ? u.role === roleFilter : true;
+                    }).map(function(u) {
+                        return {
+                            id: u.id,
+                            name: u.name,
+                            phone: u.phone,
+                            email: u.email,
+                            role: u.role,
+                            bio: u.bio,
+                            is_active: u.is_active,
+                            created_at: u.createdAt
+                        };
+                    });
+                    
+                    response = { success: true, data: users };
+                }
+                
+                // ============ CREATE USER (ADMIN) ============
+                else if (endpoint === 'users.php' && method === 'POST') {
+                    var newId = 'usr_' + Date.now();
+                    db.users.push({
+                        id: newId,
+                        name: data.name,
+                        phone: data.phone,
+                        email: data.email || '',
+                        password: data.password,
+                        role: data.role || 'tipster',
+                        bio: data.bio || '',
+                        is_active: true,
+                        token: '',
+                        createdAt: new Date().toISOString()
+                    });
+                    saveLocalDB(db);
+                    
+                    response = {
+                        success: true,
+                        message: 'User created successfully',
+                        user: { id: newId, name: data.name, phone: data.phone, role: data.role }
+                    };
+                }
+                
+                // ============ DELETE USER ============
+                else if (endpoint.includes('users.php?id=') && method === 'DELETE') {
+                    var uid = endpoint.split('id=')[1];
+                    var userToDelete = db.users.find(function(u) { return u.id === uid; });
+                    
+                    if (userToDelete && userToDelete.role === 'admin') {
+                        response = { success: false, message: 'Cannot delete admin user' };
+                    } else {
+                        db.users = db.users.filter(function(u) { return u.id !== uid; });
+                        db.tips = db.tips.filter(function(t) { return t.tipster_id !== uid; });
+                        db.purchases = db.purchases.filter(function(p) { return p.user_id !== uid; });
+                        saveLocalDB(db);
+                        response = { success: true, message: 'User deleted' };
+                    }
+                }
+                
+                // ============ GET TIPS ============
+                else if (endpoint.includes('tips.php') && method === 'GET') {
+                    var tipsterFilter = '';
+                    if (endpoint.includes('tipster_id=')) {
+                        tipsterFilter = endpoint.split('tipster_id=')[1];
+                        if (tipsterFilter.includes('&')) tipsterFilter = tipsterFilter.split('&')[0];
+                    }
+                    
+                    var tips = db.tips.filter(function(t) {
+                        return tipsterFilter ? t.tipster_id === tipsterFilter : true;
+                    }).map(function(t) {
+                        var tipster = db.users.find(function(u) { return u.id === t.tipster_id; });
+                        return {
+                            id: t.id,
+                            tipster_id: t.tipster_id,
+                            tipster_name: tipster ? tipster.name : 'Unknown',
+                            platform: t.platform,
+                            code: t.code,
+                            odds: t.odds,
+                            price: t.price,
+                            result: t.result || 'pending',
+                            purchased: t.purchased || 0,
+                            status: t.status || 'active',
+                            created_at: t.createdAt
+                        };
+                    });
+                    
+                    response = { success: true, data: tips };
+                }
+                
+                // ============ CREATE TIP ============
+                else if (endpoint === 'tips.php' && method === 'POST') {
+                    var newTip = {
+                        id: 'tip_' + Date.now(),
+                        tipster_id: data.tipster_id,
+                        platform: data.platform,
+                        code: data.bet_code,
+                        odds: data.odds,
+                        price: data.price,
+                        result: 'pending',
+                        purchased: 0,
+                        status: 'active',
+                        createdAt: new Date().toISOString()
+                    };
+                    db.tips.push(newTip);
+                    saveLocalDB(db);
+                    
+                    response = { success: true, message: 'Tip uploaded successfully!' };
+                }
+                
+                // ============ UPDATE TIP ============
+                else if (endpoint === 'tips.php' && method === 'PUT') {
+                    var tip = db.tips.find(function(t) { return t.id === data.tip_id; });
+                    if (tip) {
+                        tip.result = data.result;
+                        saveLocalDB(db);
+                        response = { success: true, message: 'Tip updated!' };
+                    } else {
+                        response = { success: false, message: 'Tip not found' };
+                    }
+                }
+                
+                // ============ GET PURCHASES ============
+                else if (endpoint.includes('purchases.php') && method === 'GET') {
+                    var userIdFilter = '';
+                    if (endpoint.includes('user_id=')) {
+                        userIdFilter = endpoint.split('user_id=')[1];
+                        if (userIdFilter.includes('&')) userIdFilter = userIdFilter.split('&')[0];
+                    }
+                    
+                    var purchases = db.purchases.filter(function(p) {
+                        return userIdFilter ? p.user_id === userIdFilter : true;
+                    });
+                    
+                    response = { success: true, data: purchases };
+                }
+                
+                // ============ CREATE PURCHASE ============
+                else if (endpoint === 'purchases.php' && method === 'POST') {
+                    // Check if already purchased
+                    var alreadyPurchased = db.purchases.find(function(p) {
+                        return p.user_id === data.user_id && p.tip_id === data.tip_id && p.status === 'paid';
+                    });
+                    
+                    if (alreadyPurchased) {
+                        response = { success: false, message: 'Already purchased this tip' };
+                    } else {
+                        var purchase = {
+                            id: 'pur_' + Date.now(),
+                            user_id: data.user_id,
+                            tip_id: data.tip_id,
+                            amount: data.amount,
+                            status: 'paid',
+                            paid_at: new Date().toISOString(),
+                            created_at: new Date().toISOString()
+                        };
+                        db.purchases.push(purchase);
+                        
+                        var tipToUpdate = db.tips.find(function(t) { return t.id === data.tip_id; });
+                        if (tipToUpdate) {
+                            tipToUpdate.purchased = (tipToUpdate.purchased || 0) + 1;
+                        }
+                        
+                        saveLocalDB(db);
+                        response = { success: true, message: 'Purchase successful! Tip unlocked.' };
+                    }
+                }
+                
+                // ============ GET FOLLOWS ============
+                else if (endpoint.includes('follows.php') && method === 'GET') {
+                    var followUserId = '';
+                    if (endpoint.includes('user_id=')) {
+                        followUserId = endpoint.split('user_id=')[1];
+                        if (followUserId.includes('&')) followUserId = followUserId.split('&')[0];
+                    }
+                    
+                    var follows = db.follows.filter(function(f) {
+                        return followUserId ? f.user_id === followUserId : true;
+                    });
+                    
+                    response = { success: true, data: follows };
+                }
+                
+                // ============ CREATE FOLLOW ============
+                else if (endpoint === 'follows.php' && method === 'POST') {
+                    var alreadyFollowing = db.follows.find(function(f) {
+                        return f.user_id === data.user_id && f.tipster_id === data.tipster_id;
+                    });
+                    
+                    if (alreadyFollowing) {
+                        response = { success: false, message: 'Already following this tipster' };
+                    } else {
+                        db.follows.push({
+                            id: 'fol_' + Date.now(),
+                            user_id: data.user_id,
+                            tipster_id: data.tipster_id,
+                            created_at: new Date().toISOString()
+                        });
+                        saveLocalDB(db);
+                        response = { success: true, message: 'Now following!' };
+                    }
+                }
+                
+                // ============ ADMIN CLEAR ALL ============
+                else if (endpoint.includes('admin.php?action=clear_all') && method === 'POST') {
+                    db.tips = [];
+                    db.purchases = [];
+                    db.follows = [];
+                    db.users = db.users.filter(function(u) { return u.role === 'admin'; });
+                    saveLocalDB(db);
+                    response = { success: true, message: 'All data cleared!' };
+                }
+                
+                // ============ DEFAULT ============
+                else {
+                    response = { success: true, data: [] };
+                }
+                
+                resolve(response);
+                
+            } catch(e) {
+                reject({ success: false, message: 'Error: ' + e.message });
+            }
+        }, 200);
+    });
+}
 
 // ============================================
 // SECURITY UTILITIES
 // ============================================
 var SecurityUtils = {
-    generateCSRFToken: function() {
-        var array = new Uint32Array(8);
-        window.crypto.getRandomValues(array);
-        var token = '';
-        for (var i = 0; i < array.length; i++) {
-            token += array[i].toString(16).padStart(8, '0');
-        }
-        return token;
-    },
-    
     sanitizeHTML: function(str) {
         if (!str || typeof str !== 'string') return '';
         var div = document.createElement('div');
@@ -115,119 +465,9 @@ var SecurityUtils = {
         if (!password || password.length < CONFIG.MIN_PASSWORD_LENGTH) {
             return { valid: false, message: 'Password must be at least ' + CONFIG.MIN_PASSWORD_LENGTH + ' characters' };
         }
-        if (!/[A-Z]/.test(password)) {
-            return { valid: false, message: 'Password must contain at least one uppercase letter' };
-        }
-        if (!/[a-z]/.test(password)) {
-            return { valid: false, message: 'Password must contain at least one lowercase letter' };
-        }
-        if (!/\d/.test(password)) {
-            return { valid: false, message: 'Password must contain at least one number' };
-        }
         return { valid: true };
-    },
-    
-    rateLimiter: (function() {
-        var lastCall = 0;
-        return function() {
-            var now = Date.now();
-            if (now - lastCall < CONFIG.RATE_LIMIT_DELAY) return false;
-            lastCall = now;
-            return true;
-        };
-    })()
+    }
 };
-
-// ============================================
-// SECURE API CALLER
-// ============================================
-function apiCall(endpoint, method, data) {
-    return new Promise(function(resolve, reject) {
-        if (!SecurityUtils.rateLimiter()) {
-            reject({ success: false, message: 'Too many requests. Please wait.' });
-            return;
-        }
-        
-        var xhr = new XMLHttpRequest();
-        var url = CONFIG.API_BASE_URL + endpoint;
-        var separator = url.indexOf('?') !== -1 ? '&' : '?';
-        url += separator + '_t=' + Date.now();
-        
-        if (method === 'GET' && data) {
-            var params = [];
-            for (var key in data) {
-                if (data.hasOwnProperty(key) && data[key] !== null && data[key] !== undefined) {
-                    params.push(encodeURIComponent(key) + '=' + encodeURIComponent(data[key]));
-                }
-            }
-            if (params.length > 0) url += '&' + params.join('&');
-        }
-        
-        xhr.open(method, url, true);
-        xhr.timeout = CONFIG.API_TIMEOUT;
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-        
-        // Add CSRF token
-        var csrfToken = sessionStorage.getItem('csrf_token') || SecurityUtils.generateCSRFToken();
-        sessionStorage.setItem('csrf_token', csrfToken);
-        xhr.setRequestHeader('X-CSRF-Token', csrfToken);
-        
-        // Add auth token
-        try {
-            var session = JSON.parse(localStorage.getItem('bashiri_session') || '{}');
-            if (session && session.token) {
-                xhr.setRequestHeader('Authorization', 'Bearer ' + session.token);
-            }
-        } catch(e) {}
-        
-        xhr.onload = function() {
-            try {
-                if (xhr.status === 204) {
-                    resolve({ success: true, data: null });
-                    return;
-                }
-                
-                var response = JSON.parse(xhr.responseText);
-                
-                if (response.csrf_token) {
-                    sessionStorage.setItem('csrf_token', response.csrf_token);
-                }
-                
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    resolve(response);
-                } else if (xhr.status === 401) {
-                    localStorage.removeItem('bashiri_session');
-                    window.location.href = 'login.html?error=Session expired';
-                    reject({ success: false, message: 'Unauthorized', code: 'UNAUTHORIZED' });
-                } else {
-                    reject(response || { success: false, message: 'Request failed' });
-                }
-            } catch(e) {
-                reject({ success: false, message: 'Invalid response' });
-            }
-        };
-        
-        xhr.onerror = function() {
-            reject({ success: false, message: 'Network error', code: 'NETWORK_ERROR' });
-        };
-        
-        xhr.ontimeout = function() {
-            xhr.abort();
-            reject({ success: false, message: 'Timeout', code: 'TIMEOUT' });
-        };
-        
-        try {
-            if (method === 'GET' || method === 'DELETE') {
-                xhr.send();
-            } else {
-                xhr.send(JSON.stringify(data || {}));
-            }
-        } catch(e) {
-            reject({ success: false, message: 'Send failed' });
-        }
-    });
-}
 
 // ============================================
 // TOAST NOTIFICATIONS
@@ -260,7 +500,6 @@ function toast(msg, type) {
     setTimeout(function() {
         if (el && el.parentNode) {
             el.style.opacity = '0';
-            el.style.transform = 'translateX(100%)';
             setTimeout(function() { if (el && el.parentNode) el.remove(); }, 300);
         }
     }, 5000);
@@ -367,8 +606,15 @@ function handleLogin(e) {
     var phone = SecurityUtils.sanitizeInput(phoneInput.value);
     var password = passwordInput.value;
     
-    if (!phone || !password) {
-        toast('Please fill in all fields', 'error');
+    if (!phone) {
+        toast('Please enter your phone number or email', 'error');
+        phoneInput.focus();
+        return;
+    }
+    
+    if (!password) {
+        toast('Please enter your password', 'error');
+        passwordInput.focus();
         return;
     }
     
@@ -396,15 +642,9 @@ function handleLogin(e) {
                 saveSession(response.user);
                 toast('Welcome, ' + response.user.name + '!', 'success');
                 
-                // Check for redirect parameter
-                var urlParams = new URLSearchParams(window.location.search);
-                var redirect = urlParams.get('redirect');
-                
                 setTimeout(function() {
                     if (response.user.role === 'admin') {
                         window.location.href = 'admin/index.html';
-                    } else if (redirect) {
-                        window.location.href = redirect + '.html';
                     } else {
                         window.location.href = 'index.html';
                     }
@@ -422,6 +662,9 @@ function handleLogin(e) {
         });
 }
 
+// ============================================
+// REGISTER FUNCTION
+// ============================================
 function handleRegister(e) {
     e.preventDefault();
     
@@ -437,18 +680,26 @@ function handleRegister(e) {
     var password = passwordInput.value;
     
     if (!name || name.length < 2) {
-        toast('Please enter your full name', 'error');
+        toast('Please enter your full name (minimum 2 characters)', 'error');
+        nameInput.focus();
         return;
     }
     
-    if (!SecurityUtils.validatePhone(phone)) {
-        toast('Please enter a valid phone number', 'error');
+    if (!phone) {
+        toast('Please enter your phone number', 'error');
+        phoneInput.focus();
         return;
     }
     
-    var passwordCheck = SecurityUtils.validatePasswordStrength(password);
-    if (!passwordCheck.valid) {
-        toast(passwordCheck.message, 'error');
+    if (!SecurityUtils.validatePhone(phone) && !SecurityUtils.validateEmail(phone)) {
+        toast('Please enter a valid phone number (e.g., 0712345678)', 'error');
+        phoneInput.focus();
+        return;
+    }
+    
+    if (!password || password.length < CONFIG.MIN_PASSWORD_LENGTH) {
+        toast('Password must be at least ' + CONFIG.MIN_PASSWORD_LENGTH + ' characters', 'error');
+        passwordInput.focus();
         return;
     }
     
@@ -458,45 +709,54 @@ function handleRegister(e) {
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating account...';
     }
     
-    apiCall('auth.php?action=register', 'POST', {
+    var registerData = {
         name: name,
         phone: phone,
         password: password
-    })
-    .then(function(response) {
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalText;
-        }
-        
-        if (response.success) {
-            toast('Account created! Please login.', 'success');
-            setTimeout(function() {
-                window.location.href = 'login.html';
-            }, 1500);
-        } else {
-            toast(response.message || 'Registration failed', 'error');
-        }
-    })
-    .catch(function(error) {
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalText;
-        }
-        toast(error.message || 'Registration failed', 'error');
-    });
+    };
+    
+    if (SecurityUtils.validateEmail(phone)) {
+        registerData.email = phone.toLowerCase();
+    }
+    
+    apiCall('auth.php?action=register', 'POST', registerData)
+        .then(function(response) {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+            
+            if (response.success) {
+                toast('Account created successfully! Please login.', 'success');
+                setTimeout(function() {
+                    window.location.href = 'login.html';
+                }, 1500);
+            } else {
+                toast(response.message || 'Registration failed', 'error');
+            }
+        })
+        .catch(function(error) {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+            toast(error.message || 'Registration failed', 'error');
+        });
 }
 
+// ============================================
+// LOGOUT FUNCTION
+// ============================================
 function handleLogout() {
     clearSession();
-    toast('Logged out', 'success');
+    toast('Logged out successfully', 'success');
     setTimeout(function() {
-        window.location.href = '../index.html';
+        window.location.href = 'index.html';
     }, 500);
 }
 
 // ============================================
-// ADMIN PANEL GUARD
+// ADMIN GUARD
 // ============================================
 function requireAdmin() {
     var session = getSession();
@@ -536,405 +796,99 @@ function updateNav() {
         html += ' <button class="btn btn-outline btn-sm" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>';
         nav.innerHTML = html;
     } else {
-        nav.innerHTML = '<a href="login.html" class="btn btn-outline btn-sm">Login</a> ' +
+        nav.innerHTML = '<a href="leaderboard.html" class="btn btn-outline btn-sm">Top Tipsters</a> ' +
+                       '<a href="login.html" class="btn btn-outline btn-sm">Login</a> ' +
                        '<a href="register.html" class="btn btn-primary btn-sm">Register</a>';
     }
 }
 
 // ============================================
-// INITIALIZATION
+// FORMATTING HELPERS
 // ============================================
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize dark mode
-    var savedTheme = localStorage.getItem('bashiri_theme');
-    if (savedTheme === 'dark') {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        var darkToggle = document.getElementById('darkModeToggle');
-        if (darkToggle) darkToggle.innerHTML = '<i class="fas fa-sun"></i>';
-    }
-    
-    // Restore session
-    restoreSession();
-    
-    // Check if this is admin page
-    var path = window.location.pathname;
-    var isAdminPath = path.indexOf('/admin') !== -1;
-    
-    if (isAdminPath) {
-        // STRICT ADMIN CHECK
-        if (!requireAdmin()) return; // Stop execution if not admin
-        
-        // Initialize admin panel only if authorized
-        initAdminPanel();
-    }
-    
-    // Setup forms
-    var loginForm = document.getElementById('loginForm');
-    if (loginForm) {
-        loginForm.addEventListener('submit', handleLogin);
-    }
-    
-    var registerForm = document.getElementById('registerForm');
-    if (registerForm) {
-        registerForm.addEventListener('submit', handleRegister);
-    }
-    
-    // Dark mode toggle
-    var darkToggle = document.getElementById('darkModeToggle');
-    if (darkToggle) {
-        darkToggle.addEventListener('click', function() {
-            var currentTheme = document.documentElement.getAttribute('data-theme');
-            var newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('bashiri_theme', newTheme);
-            darkToggle.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+function fmt(amount) {
+    var num = Number(amount);
+    if (isNaN(num) || num < 0) return 'TZS 0';
+    return 'TZS ' + num.toLocaleString('en-TZ');
+}
+
+function fdate(dateStr) {
+    if (!dateStr) return 'N/A';
+    try {
+        return new Date(dateStr).toLocaleDateString('en-GB', {
+            day: 'numeric', month: 'short', year: 'numeric'
         });
-    }
-    
-    // Show error from URL parameters
-    var urlParams = new URLSearchParams(window.location.search);
-    var errorMsg = urlParams.get('error');
-    if (errorMsg) {
-        toast(decodeURIComponent(errorMsg), 'error');
-        // Clean URL
-        if (window.history.replaceState) {
-            window.history.replaceState({}, document.title, window.location.pathname);
-        }
-    }
-    
-    // Initialize home page if not admin
-    if (!isAdminPath && !loginForm && !registerForm) {
-        initHomePage();
-    }
-    
-    console.log('✅ Bashiri Nasi v4.1.0 - SECURE MODE');
-    console.log('🔒 Admin panel protected by authentication');
-});
+    } catch(e) { return 'N/A'; }
+}
+
+function getPlatformIcon(platform) {
+    var p = (platform || '').toUpperCase();
+    if (p.includes('SPORTBET')) return '🔴';
+    if (p === 'BETPAWA') return '🔵';
+    if (p === 'SPORTPESA') return '🟢';
+    if (p === 'BETWAY') return '🟡';
+    return '📱';
+}
 
 // ============================================
-// ADMIN PANEL INITIALIZATION
+// BUY TIP
 // ============================================
-function initAdminPanel() {
-    // Double-check authentication
-    var session = getSession();
-    if (!session || session.role !== 'admin') {
-        window.location.href = '../login.html?error=Access denied';
+function buyTip(tipId, amount) {
+    if (!currentUser) {
+        window.location.href = 'login.html';
         return;
     }
     
-    // Set admin name
-    var adminNameEl = document.getElementById('adminName');
-    if (adminNameEl) {
-        adminNameEl.textContent = session.name || 'Administrator';
-    }
+    if (!confirm('Purchase this tip for ' + fmt(amount) + '?')) return;
     
-    // Hide all content until verified
-    var mainContent = document.querySelector('.main-content');
-    if (mainContent) {
-        mainContent.style.display = 'block';
-    }
-    
-    // Setup sidebar navigation
-    var sidebarItems = document.querySelectorAll('[data-admin-tab]');
-    sidebarItems.forEach(function(item) {
-        item.addEventListener('click', function() {
-            var tab = this.getAttribute('data-admin-tab');
-            
-            sidebarItems.forEach(function(i) { i.classList.remove('active'); });
-            this.classList.add('active');
-            
-            var tabContents = document.querySelectorAll('.admin-tab-content');
-            tabContents.forEach(function(c) { c.style.display = 'none'; });
-            
-            var tabId = 'admin' + tab.charAt(0).toUpperCase() + tab.slice(1) + 'Tab';
-            var tabEl = document.getElementById(tabId);
-            if (tabEl) {
-                tabEl.style.display = 'block';
-            }
-        });
-    });
-    
-    // Load admin data
-    loadAdminData();
-    
-    // Setup add tipster form
-    var addTipsterForm = document.getElementById('addTipsterForm');
-    if (addTipsterForm) {
-        addTipsterForm.addEventListener('submit', handleAddTipster);
-    }
-    
-    console.log('👑 Admin panel initialized for:', session.name);
-}
-
-// ============================================
-// ADMIN DATA LOADING
-// ============================================
-function loadAdminData() {
-    // Load overview stats
-    loadOverviewStats();
-    // Load users table
-    loadUsersTable();
-    // Load tipsters table
-    loadTipstersTable();
-    // Load tips table
-    loadTipsTable();
-    // Load transactions
-    loadTransactionsTable();
-}
-
-function loadOverviewStats() {
-    Promise.all([
-        apiCall('users.php', 'GET'),
-        apiCall('tips.php?action=all', 'GET'),
-        apiCall('purchases.php', 'GET')
-    ]).then(function(results) {
-        var users = results[0].success ? (results[0].data || []) : [];
-        var tips = results[1].success ? (results[1].data || []) : [];
-        var purchases = results[2].success ? (results[2].data || []) : [];
-        
-        var totalUsers = users.filter(function(u) { return u.role === 'user'; }).length;
-        var totalTipsters = users.filter(function(u) { return u.role === 'tipster'; }).length;
-        var paidPurchases = purchases.filter(function(p) { return p.status === 'paid'; });
-        var totalRevenue = paidPurchases.reduce(function(sum, p) { return sum + (p.amount || 0); }, 0);
-        var pendingTips = tips.filter(function(t) { return t.result === 'pending'; }).length;
-        
-        var statsContainer = document.getElementById('adminStats');
-        if (statsContainer) {
-            statsContainer.innerHTML = 
-                '<div class="stat-card"><div class="stat-number">' + totalUsers + '</div><div class="stat-label">Users</div></div>' +
-                '<div class="stat-card"><div class="stat-number">' + totalTipsters + '</div><div class="stat-label">Tipsters</div></div>' +
-                '<div class="stat-card"><div class="stat-number">' + tips.length + '</div><div class="stat-label">Total Tips</div></div>' +
-                '<div class="stat-card"><div class="stat-number">' + paidPurchases.length + '</div><div class="stat-label">Sales</div></div>' +
-                '<div class="stat-card"><div class="stat-number">' + fmt(totalRevenue) + '</div><div class="stat-label">Revenue</div></div>' +
-                '<div class="stat-card"><div class="stat-number">' + pendingTips + '</div><div class="stat-label">Pending</div></div>';
-        }
-    }).catch(function(error) {
-        console.error('Error loading stats:', error);
-    });
-}
-
-function loadUsersTable() {
-    apiCall('users.php', 'GET')
-        .then(function(response) {
-            var users = response.success ? (response.data || []) : [];
-            var tbody = document.getElementById('usersTableBody');
-            if (!tbody) return;
-            
-            if (users.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No users found</td></tr>';
-                return;
-            }
-            
-            var html = '';
-            users.forEach(function(user) {
-                var roleBadge = user.role === 'admin' ? 'badge-danger' : 
-                               user.role === 'tipster' ? 'badge-info' : 'badge-primary';
-                
-                html += '<tr>' +
-                    '<td>' + SecurityUtils.sanitizeHTML(user.name || 'N/A') + '</td>' +
-                    '<td>' + SecurityUtils.sanitizeHTML(user.phone || user.email || 'N/A') + '</td>' +
-                    '<td><span class="badge ' + roleBadge + '">' + user.role + '</span></td>' +
-                    '<td>' + (user.is_active ? 'Active' : 'Inactive') + '</td>' +
-                    '<td>' + fdate(user.created_at) + '</td>' +
-                    '<td>' + (user.role !== 'admin' ? '<button class="btn-delete" onclick="deleteUser(\'' + user.id + '\')"><i class="fas fa-trash"></i></button>' : '') + '</td>' +
-                    '</tr>';
-            });
-            
-            tbody.innerHTML = html;
-        })
-        .catch(function(error) {
-            console.error('Error loading users:', error);
-        });
-}
-
-function loadTipstersTable() {
-    apiCall('users.php?role=tipster', 'GET')
-        .then(function(response) {
-            var tipsters = response.success ? (response.data || []) : [];
-            var tbody = document.getElementById('tipstersTableBody');
-            if (!tbody) return;
-            
-            if (tipsters.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No tipsters found</td></tr>';
-                return;
-            }
-            
-            apiCall('tips.php?action=all', 'GET')
-                .then(function(tipResponse) {
-                    var tips = tipResponse.success ? (tipResponse.data || []) : [];
-                    var html = '';
-                    
-                    tipsters.forEach(function(tipster) {
-                        var tipsterTips = tips.filter(function(t) { return t.tipster_id === tipster.id; });
-                        var won = tipsterTips.filter(function(t) { return t.result === 'won'; }).length;
-                        var winRate = tipsterTips.length > 0 ? Math.round((won / tipsterTips.length) * 100) : 0;
-                        var sold = tipsterTips.reduce(function(sum, t) { return sum + (t.purchased || 0); }, 0);
-                        
-                        html += '<tr>' +
-                            '<td>' + SecurityUtils.sanitizeHTML(tipster.name || 'N/A') + '</td>' +
-                            '<td>' + SecurityUtils.sanitizeHTML(tipster.phone || 'N/A') + '</td>' +
-                            '<td>' + SecurityUtils.sanitizeHTML((tipster.bio || '').substring(0, 50)) + '</td>' +
-                            '<td>' + tipsterTips.length + '</td>' +
-                            '<td>' + sold + '</td>' +
-                            '<td>' + winRate + '%</td>' +
-                            '<td><button class="btn-delete" onclick="deleteUser(\'' + tipster.id + '\')"><i class="fas fa-trash"></i></button></td>' +
-                            '</tr>';
-                    });
-                    
-                    tbody.innerHTML = html;
-                });
-        })
-        .catch(function(error) {
-            console.error('Error loading tipsters:', error);
-        });
-}
-
-function loadTipsTable() {
-    apiCall('tips.php?action=all', 'GET')
-        .then(function(response) {
-            var tips = response.success ? (response.data || []) : [];
-            var tbody = document.getElementById('tipsTableBody');
-            if (!tbody) return;
-            
-            if (tips.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No tips found</td></tr>';
-                return;
-            }
-            
-            var html = '';
-            tips.reverse().forEach(function(tip) {
-                var badgeClass = tip.result === 'won' ? 'badge-success' : 
-                                tip.result === 'lost' ? 'badge-danger' : 'badge-warning';
-                var badgeText = tip.result === 'won' ? '🏆 WON' : 
-                               tip.result === 'lost' ? '❌ LOST' : '⏳ PENDING';
-                
-                html += '<tr>' +
-                    '<td>' + getPlatformIcon(tip.platform) + ' ' + SecurityUtils.sanitizeHTML((tip.platform || '').toUpperCase()) + '</td>' +
-                    '<td><code>' + SecurityUtils.sanitizeHTML(tip.code || 'N/A') + '</code></td>' +
-                    '<td>' + (tip.odds || 'N/A') + '</td>' +
-                    '<td>' + fmt(tip.price || 0) + '</td>' +
-                    '<td>' + SecurityUtils.sanitizeHTML(tip.tipster_name || 'N/A') + '</td>' +
-                    '<td><span class="badge ' + badgeClass + '">' + badgeText + '</span></td>' +
-                    '<td>' + (tip.purchased || 0) + '</td>' +
-                    '<td>' + fdate(tip.created_at) + '</td>' +
-                    '</tr>';
-            });
-            
-            tbody.innerHTML = html;
-        })
-        .catch(function(error) {
-            console.error('Error loading tips:', error);
-        });
-}
-
-function loadTransactionsTable() {
-    apiCall('purchases.php', 'GET')
-        .then(function(response) {
-            var purchases = response.success ? (response.data || []) : [];
-            var tbody = document.getElementById('transactionsTableBody');
-            if (!tbody) return;
-            
-            if (purchases.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No transactions found</td></tr>';
-                return;
-            }
-            
-            Promise.all([
-                apiCall('users.php', 'GET'),
-                apiCall('tips.php?action=all', 'GET')
-            ]).then(function(results) {
-                var users = results[0].success ? (results[0].data || []) : [];
-                var tips = results[1].success ? (results[1].data || []) : [];
-                
-                var html = '';
-                purchases.reverse().forEach(function(purchase) {
-                    var buyer = users.find(function(u) { return u.id === purchase.user_id; });
-                    var buyerName = buyer ? (buyer.name || buyer.phone) : 'Unknown';
-                    
-                    var tip = tips.find(function(t) { return t.id === purchase.tip_id; });
-                    var tipCode = tip ? (tip.code || 'N/A') : 'N/A';
-                    
-                    html += '<tr>' +
-                        '<td>' + fdate(purchase.paid_at || purchase.created_at) + '</td>' +
-                        '<td>' + SecurityUtils.sanitizeHTML(buyerName) + '</td>' +
-                        '<td><code>' + SecurityUtils.sanitizeHTML(tipCode) + '</code></td>' +
-                        '<td>' + fmt(purchase.amount) + '</td>' +
-                        '<td><span class="badge badge-success">' + (purchase.status || 'PAID').toUpperCase() + '</span></td>' +
-                        '<td>' + (purchase.id || '').substring(0, 12) + '</td>' +
-                        '</tr>';
-                });
-                
-                tbody.innerHTML = html;
-            });
-        })
-        .catch(function(error) {
-            console.error('Error loading transactions:', error);
-        });
-}
-
-function handleAddTipster(e) {
-    e.preventDefault();
-    
-    var name = SecurityUtils.sanitizeInput(document.getElementById('tipsterNameInput').value);
-    var phone = SecurityUtils.sanitizeInput(document.getElementById('tipsterPhoneInput').value);
-    var password = document.getElementById('tipsterPasswordInput').value;
-    var bio = SecurityUtils.sanitizeInput(document.getElementById('tipsterBioInput').value) || 'Professional Tipster';
-    
-    if (!name || !phone || !password) {
-        toast('Please fill all fields', 'error');
-        return;
-    }
-    
-    if (password.length < CONFIG.MIN_PASSWORD_LENGTH) {
-        toast('Password must be at least ' + CONFIG.MIN_PASSWORD_LENGTH + ' characters', 'error');
-        return;
-    }
-    
-    apiCall('users.php', 'POST', {
-        name: name,
-        phone: phone,
-        password: password,
-        role: 'tipster',
-        bio: bio
+    apiCall('purchases.php', 'POST', {
+        user_id: currentUser.id,
+        tip_id: tipId,
+        amount: amount
     })
     .then(function(response) {
         if (response.success) {
-            toast('Tipster created successfully!', 'success');
-            document.getElementById('addTipsterForm').reset();
-            loadAdminData();
+            toast('✅ Tip unlocked successfully!', 'success');
+            setTimeout(function() { location.reload(); }, 1500);
         } else {
-            toast(response.message || 'Failed to create tipster', 'error');
+            toast(response.message || 'Purchase failed', 'error');
         }
     })
     .catch(function() {
-        toast('Server error', 'error');
+        toast('Purchase failed', 'error');
     });
 }
 
-function deleteUser(userId) {
-    if (!confirm('Are you sure you want to delete this user?')) return;
+// ============================================
+// FOLLOW TIPSTER
+// ============================================
+function followTipster(tipsterId) {
+    if (!currentUser) {
+        window.location.href = 'login.html';
+        return;
+    }
     
-    apiCall('users.php?id=' + userId, 'DELETE')
-        .then(function(response) {
-            if (response.success) {
-                toast('User deleted', 'success');
-                loadAdminData();
-            } else {
-                toast(response.message || 'Delete failed', 'error');
-            }
-        })
-        .catch(function() {
-            toast('Server error', 'error');
-        });
+    apiCall('follows.php', 'POST', {
+        user_id: currentUser.id,
+        tipster_id: tipsterId
+    })
+    .then(function(response) {
+        if (response.success) {
+            toast('✅ Now following!', 'success');
+        } else {
+            toast(response.message || 'Already following', 'info');
+        }
+    })
+    .catch(function() {
+        toast('Error following tipster', 'error');
+    });
 }
 
 // ============================================
-// HOME PAGE INITIALIZATION
+// HOME PAGE
 // ============================================
 function initHomePage() {
     console.log('🏠 Home page initialized');
     
-    // Load recent tips
     apiCall('tips.php?action=all', 'GET')
         .then(function(response) {
             if (response.success) {
@@ -986,30 +940,79 @@ function displayTips(tips) {
 }
 
 // ============================================
-// UTILITY FUNCTIONS
+// INITIALIZATION
 // ============================================
-function fmt(amount) {
-    var num = Number(amount);
-    if (isNaN(num) || num < 0) return 'TZS 0';
-    return 'TZS ' + num.toLocaleString('en-TZ');
-}
-
-function fdate(dateStr) {
-    if (!dateStr) return 'N/A';
-    try {
-        return new Date(dateStr).toLocaleDateString('en-GB', {
-            day: 'numeric', month: 'short', year: 'numeric'
+document.addEventListener('DOMContentLoaded', function() {
+    // Dark mode
+    var savedTheme = localStorage.getItem('bashiri_theme');
+    if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        var darkToggle = document.getElementById('darkModeToggle');
+        if (darkToggle) darkToggle.innerHTML = '<i class="fas fa-sun"></i>';
+    }
+    
+    restoreSession();
+    
+    var path = window.location.pathname;
+    var isAdminPath = path.indexOf('/admin') !== -1;
+    
+    if (isAdminPath) {
+        if (!requireAdmin()) return;
+        initAdminPanel();
+    }
+    
+    var loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+    }
+    
+    var registerForm = document.getElementById('registerForm');
+    if (registerForm) {
+        registerForm.addEventListener('submit', handleRegister);
+    }
+    
+    var darkToggle = document.getElementById('darkModeToggle');
+    if (darkToggle) {
+        darkToggle.addEventListener('click', function() {
+            var currentTheme = document.documentElement.getAttribute('data-theme');
+            var newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('bashiri_theme', newTheme);
+            darkToggle.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
         });
-    } catch(e) { return 'N/A'; }
-}
+    }
+    
+    var urlParams = new URLSearchParams(window.location.search);
+    var errorMsg = urlParams.get('error');
+    if (errorMsg) {
+        toast(decodeURIComponent(errorMsg), 'error');
+        if (window.history.replaceState) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }
+    
+    if (!isAdminPath && !loginForm && !registerForm) {
+        initHomePage();
+    }
+    
+    console.log('✅ Bashiri Nasi v5.0.0 - LOCAL STORAGE MODE');
+    console.log('👑 Default admin: admin@bashiri.com / Admin@123');
+});
 
-function getPlatformIcon(platform) {
-    var p = (platform || '').toUpperCase();
-    if (p.includes('SPORTBET')) return '🔴';
-    if (p === 'BETPAWA') return '🔵';
-    if (p === 'SPORTPESA') return '🟢';
-    if (p === 'BETWAY') return '🟡';
-    return '📱';
+// ============================================
+// ADMIN PANEL
+// ============================================
+function initAdminPanel() {
+    var session = getSession();
+    if (!session || session.role !== 'admin') {
+        window.location.href = '../login.html?error=Access denied';
+        return;
+    }
+    
+    var adminNameEl = document.getElementById('adminName');
+    if (adminNameEl) adminNameEl.textContent = session.name || 'Administrator';
+    
+    console.log('👑 Admin panel initialized');
 }
 
 // ============================================
@@ -1018,14 +1021,6 @@ function getPlatformIcon(platform) {
 window.handleLogin = handleLogin;
 window.handleRegister = handleRegister;
 window.handleLogout = handleLogout;
-window.deleteUser = deleteUser;
+window.buyTip = buyTip;
+window.followTipster = followTipster;
 window.toast = toast;
-
-console.log('🛡️ SECURITY FEATURES ACTIVE:');
-console.log('  ✓ Immediate auth check on page load');
-console.log('  ✓ Admin panel protected - redirects to login');
-console.log('  ✓ Session validation with expiry');
-console.log('  ✓ CSRF protection');
-console.log('  ✓ XSS prevention (HTML sanitization)');
-console.log('  ✓ Rate limiting');
-console.log('  ✓ Password strength enforcement');
